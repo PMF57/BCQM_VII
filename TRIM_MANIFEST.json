@@ -1,0 +1,73 @@
+{
+  "kept_configs": [
+    "configs/generated_vreg_C5_subset/ball_growth_ens_C5_W100_N4_n0p4.yml",
+    "configs/generated_vreg_C5_subset/ball_growth_ens_C5_W100_N4_n0p8.yml",
+    "configs/generated_vreg_C5_subset/ball_growth_ens_C5_W100_N8_n0p4.yml",
+    "configs/generated_vreg_C5_subset/ball_growth_ens_C5_W100_N8_n0p8.yml",
+    "configs/generated_vreg_C5_subset/timeseries_ens_C5_W100_N4_n0p4_s56791_56795_spaceon.yml",
+    "configs/generated_vreg_C5_subset/timeseries_ens_C5_W100_N4_n0p8_s56791_56795_spaceon.yml",
+    "configs/generated_vreg_C5_subset/timeseries_ens_C5_W100_N8_n0p4_s56791_56795_spaceon.yml",
+    "configs/generated_vreg_C5_subset/timeseries_ens_C5_W100_N8_n0p8_s56791_56795_spaceon.yml",
+    "configs/quickcheck_full.yml",
+    "configs/quickcheck_vglue_full.yml",
+    "configs/selftests/selftest_geometry.yml",
+    "configs/selftests/selftest_glueoff_space_on.yml",
+    "configs/selftests/selftest_space_on.yml",
+    "configs/selftests/selftest_vglue_nospace.yml"
+  ],
+  "removed_config_count": 63,
+  "removed_configs_sample": [
+    "configs/timeseries_probe.yml",
+    "configs/bringup_phase0_nosnaps.yml",
+    "configs/scan_ablations_phase1.yml",
+    "configs/bringup_phase0_nosnaps_seeds3.yml",
+    "configs/timeseries_probe_50bins.yml",
+    "configs/run_C5_phase_plus_cadence.yml",
+    "configs/scan_full_phase1_nosnaps.yml",
+    "configs/scan_full_phase1.yml",
+    "configs/bringup_phase0.yml",
+    "configs/generated_vreg_C5_subset/vreg_C5_W50_N1N2_seeds56791_56806_vglue.yml",
+    "configs/generated_vreg_C5_subset/vreg_C5_W50_N4N8_seeds56791_56806_vglue.yml",
+    "configs/generated_vreg_C5_subset/vreg_C5_W100_N4_seed56790_B_space_on_preuse_0p50.yml",
+    "configs/generated_vreg_C5_subset/vreg_C5_W100_N4_seed56789_PathA_B_space_on.yml",
+    "configs/generated_vreg_C5_subset/ball_growth_diag_C5_W100_N4_n0p8_seed56796.yml",
+    "configs/generated_vreg_C5_subset/vreg_C9_W20_N2N4N6N8_seeds90123_90138_vglue.yml",
+    "configs/generated_vreg_C5_subset/vreg_C9_W50_N2N4N6N8_seeds90123_90138_vglue.yml",
+    "configs/generated_vreg_C5_subset/vreg_C5_W100_N4_seed56789_PathA_A_nospace.yml",
+    "configs/generated_vreg_C5_subset/vreg_C5_W100_N4_seed56790_B_space_on_preuse_0p80.yml",
+    "configs/generated_vreg_C5_subset/pathA_C5_W100_N4_p0p50_seeds56791_56798.yml",
+    "configs/generated_vreg_C5_subset/pathA_C5_W100_N8_p0p50_seeds56791_56798.yml",
+    "configs/generated_vreg_C5_subset/geometry_scan_C5_W100_N4.yml",
+    "configs/generated_vreg_C5_subset/pathA_scan_C5_W100_N8_from_n_s56791_56798.yml",
+    "configs/generated_vreg_C5_subset/pathA_scan_C5_W100_N8_from_n_s56791_56798_glueoff.yml",
+    "configs/generated_vreg_C5_subset/pathA_scan_C5_W100_N4_from_n_s56791_56798.yml",
+    "configs/generated_vreg_C5_subset/vreg_C5_W100_N4N8_seeds56791_56806_vglue.yml"
+  ],
+  "removed_analysis": [
+    "bcqm_vii_cloth/analysis/geometry_diagnosis.py",
+    "bcqm_vii_cloth/analysis/sweetspot_check.py",
+    "bcqm_vii_cloth/analysis/timeseries_pilot_figures.py",
+    "bcqm_vii_cloth/analysis/ball_growth_scan_summary_N4.py",
+    "bcqm_vii_cloth/analysis/merge_glueoff_into_engine.py",
+    "bcqm_vii_cloth/analysis/ball_growth_scan_summary.py",
+    "bcqm_vii_cloth/analysis/pathA_summary.py",
+    "bcqm_vii_cloth/analysis/scan_from_n_summary.py",
+    "bcqm_vii_cloth/analysis/geometry_summary.py",
+    "bcqm_vii_cloth/analysis/geometry_scan_summary.py",
+    "bcqm_vii_cloth/analysis/coupled_LS_batch_summary.py"
+  ],
+  "removed_pipelines": [
+    "bcqm_vii_cloth/pipelines/run_ablation_suite_W100_glueoff.sh",
+    "bcqm_vii_cloth/pipelines/run_ball_growth_scan_W100.sh",
+    "bcqm_vii_cloth/pipelines/run_geometry_probe_W100.sh",
+    "bcqm_vii_cloth/pipelines/run_ablation_suite_W100.sh",
+    "bcqm_vii_cloth/pipelines/run_geometry_scan_W100.sh",
+    "bcqm_vii_cloth/pipelines/run_geometry_diagnosis_W100.sh",
+    "bcqm_vii_cloth/pipelines/run_ball_growth_scan_W100_N4.sh"
+  ],
+  "notes": [
+    "Trimmed to essentials for Stage-2 cloth development, keeping only core regression ensembles and selftest configs.",
+    "Removed macOS metadata, __pycache__, and unused analysis/pipeline scripts.",
+    "Outputs folders were not included in the supplied zip and are not part of this trimmed bundle."
+  ]
+}

@@ -1,0 +1,29 @@
+BCQM VI → VII lineage hash check
+Timestamp: 20260129_122213
+VI dir : bcqm_vi_spacetime
+VII dir: bcqm_vii_cloth
+
+STATUS    VI_SHA256     VII_SHA256    REL_PATH
+------    --------      --------      --------
+MATCH     91447944015c  91447944015c  __init__.py
+MATCH     f9b058f500d5  f9b058f500d5  cli.py
+MATCH     751d25030103  751d25030103  runner.py
+MATCH     9af2834764cc  9af2834764cc  engine_vglue.py
+MATCH     c8a67ae89ded  c8a67ae89ded  event_graph.py
+MATCH     fb8f8d3b12f4  fb8f8d3b12f4  config_schema.py
+MATCH     9b750532d084  9b750532d084  io.py
+MATCH     44e98c81d2c0  44e98c81d2c0  selection.py
+MATCH     9b6f7668f5c8  9b6f7668f5c8  kernels_v_ancestor.py
+MATCH     50a97170fbfd  50a97170fbfd  metrics_v_ancestor.py
+MATCH     faf44a6e8e5c  faf44a6e8e5c  state_v_ancestor.py
+MATCH     03c932c04c5f  03c932c04c5f  analysis/build_fingerprint.py
+MATCH     f3e42491ebd1  f3e42491ebd1  analysis/selftest_runner.py
+MATCH     952917981577  952917981577  pipelines/run_selftest.sh
+
+Summary:
+  MATCH   : 14
+  DIFF    : 0
+  MISS_VI : 0
+  MISS_VII: 0
+
+NOTE: Differences can be expected if you renamed package/import strings, pruned modules, or changed metadata; this report proves identity only for files that MATCH exactly.
