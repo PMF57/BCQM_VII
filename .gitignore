@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# macOS + zip artefacts
+.DS_Store
+**/.DS_Store
+__MACOSX/
+**/__MACOSX/
+._*
+**/._*
+
+# Bulk intermediate artefacts (safe to ignore)
+SNAPSHOT*.csv
+SNAPSHOT*.json
+**/SNAPSHOT*.csv
+**/SNAPSHOT*.json
+
+# Archives
+*.zip
