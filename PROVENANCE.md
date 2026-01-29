@@ -36,7 +36,7 @@ This demonstrates byte-identical identity for the tested files and constitutes t
 
 The proof artefacts are stored under:
 - `docs/provenance/prove_vi_lineage.sh`
-- `docs/provenance/vi_vs_vii_hash_report_*.txt` (timestamped)
+- `docs/provenance/vi_vs_vii_hash_report_20260129_122213.txt` (timestamped)
 
 ## Going forward
 All Stage-2 development (new cloth construction, metrics, configs, pipelines) is tracked directly in this BCQM VII repository from the proven baseline.
