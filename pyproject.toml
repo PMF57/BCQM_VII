@@ -1,4 +1,4 @@
-[build-system]
+Pip3 install PyYAML[build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
@@ -13,6 +13,10 @@ dependencies = [
   "numpy>=2.0",
   "pandas>=2.2",
   "matplotlib>=3.8",
+  "networkx>=3.3",
+  "python-louvain>=0.16",
+  "scikit-learn>=1.4",
+  "scipy>=1.11",
 ]
 
 [tool.setuptools.packages.find]

@@ -1,0 +1,471 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{framed}
+
+\title{BCQM VII Path A Validation: Test Plan Beyond Stability}
+\author{BCQM Research Notes}
+\date{31 January 2026 (Revised)}
+
+\begin{document}
+
+\maketitle
+
+\section*{Executive Summary}
+
+Gate 1 (stability) has been cleared: community partitions show strong agreement (NMI $\sim$0.83--0.84, ARI $\sim$0.54--0.64), and super-graph ball-growth curves are stable ($d_{L2} \sim 10^{-2}$). This document outlines the validation tests for Gates 2--4 to establish that the super-graph is a genuine geometric object with physical significance.
+
+\section*{Overview: Validation Gates}
+
+\begin{itemize}
+\item \textbf{Gate 1 (Stability):} PASSED --- Community structure and super-graph diagnostics are stable across seeds
+\item \textbf{Gate 2 (Geometry):} Does the super-graph have intrinsic geometric structure?
+\item \textbf{Gate 3 (Physics):} Does the super-graph connect to physical observables (threads, interactions)?
+\item \textbf{Gate 4 (Scaling):} Do geometric properties converge and scale correctly with $N$?
+\end{itemize}
+
+\section{Gate 2: The Super-Graph Has Geometric Structure}
+
+\subsection{Test 2.1: Spectral Dimension}
+
+\subsubsection*{What}
+Calculate the spectral dimension $d_s$ of the super-graph from the return probability of a random walk.
+
+\subsubsection*{Method}
+\begin{enumerate}
+\item Run random walks on super-graph nodes
+\item Measure return probability $P(t)$ at time $t$
+\item Plot $\log P(t)$ vs $\log t$
+\item Spectral dimension: $d_s = -2 \times \text{slope}$
+\end{enumerate}
+
+\subsubsection*{Why It Matters}
+Real emergent geometries have finite $d_s$ even when the graph is topologically complex. CDT and other quantum gravity models predict $d_s \approx 2$ at short scales, $d_s \approx 4$ at long scales. If the super-graph shows $d_s \approx 2$--4, that is a strong hint of emergent spacetime structure.
+
+\subsubsection*{Pass Criterion}
+$d_s$ is finite, stable across seeds (standard deviation $<10\%$ of mean), and in physically plausible range (1.5--4.0).
+
+\subsubsection*{Implementation Notes}
+\begin{itemize}
+\item Use 1000+ random walk samples per super-graph
+\item Sample return probability at $t \in \{1, 2, 4, 8, 16, 32, \ldots\}$ up to $t_{\max} \sim K/2$
+\item Average $d_s$ across all seeds at each $(N, n)$ configuration
+\end{itemize}
+
+\begin{framed}
+\textbf{⚠ Finite-Size Warning:} Spectral dimension extraction suffers severe finite-size effects for $K < 50$ nodes. Random walks hit graph boundaries before establishing a clean power-law regime. At $N=8$ ($K \approx 22$--24), $d_s$ estimates will be noisy and may not be physically meaningful. Do not treat poor $d_s$ results at small $N$ as evidence of geometry failure. Rely on Test 2.4 (ball-growth dimension) for Phase 1 validation. Consider $d_s$ reliable only at $N \geq 32$ ($K \geq 50$).
+\end{framed}
+
+
+\subsection{Test 2.3: Curvature Distribution}
+
+\subsubsection*{What}
+Assign Ollivier-Ricci curvature (or Forman curvature) to super-graph edges.
+
+\subsubsection*{Method}
+\begin{enumerate}
+\item Use network geometry libraries (e.g., \texttt{GraphRicciCurvature} Python package)
+\item Compute curvature for each edge in super-graph
+\item Plot curvature distribution histogram
+\item Check if distribution shape is stable across seeds at same $(N,n)$
+\end{enumerate}
+
+\subsubsection*{Why It Matters}
+Emergent geometries show non-trivial curvature distributions. Flat space produces a narrow distribution near zero. Curved space produces a broad distribution, possibly bimodal. If Path A creates ``cloth'', systematic curvature at community boundaries may emerge.
+
+\subsubsection*{Pass Criterion}
+Non-degenerate curvature distribution (not all edges near zero), stable shape across seeds (KS test $p > 0.05$ for pairwise comparisons), possibly structured (not purely random).
+
+\subsubsection*{Implementation Notes}
+\begin{itemize}
+\item Ollivier-Ricci curvature computation can be slow for large graphs; consider sampling edges
+\item Report mean, median, and standard deviation of curvature
+\item Overlay histograms from all seeds at same $(N, n)$ to check stability visually
+\end{itemize}
+
+\subsection{Test 2.4: Effective Dimensionality from Ball Growth}
+
+\subsubsection*{What}
+Extract effective dimension from ball-growth curves already computed.
+
+\subsubsection*{Method}
+\begin{enumerate}
+\item At radius $r$, count $N(r)$ = nodes within graph distance $r$ from a random source node
+\item In $d$-dimensional space: $N(r) \sim r^d$
+\item Fit $\log N(r)$ vs $\log r$ in the linear regime, extract slope $= d_{\text{eff}}$
+\item Average over multiple source nodes and across seeds
+\end{enumerate}
+
+\subsubsection*{Why It Matters}
+This gives the ``ambient dimension'' the super-graph acts like it lives in. If $d_{\text{eff}} \approx 2$--4, that is physically suggestive (spacetime-like). If $d_{\text{eff}}$ is stable across seeds but varies with $n$, that maps connectivity strength to geometric dimensionality.
+
+\subsubsection*{Pass Criterion}
+$d_{\text{eff}}$ is finite, stable (standard deviation $<15\%$ of mean), and in physically plausible range (1.5--4.5).
+
+\subsubsection*{Implementation Notes}
+\begin{itemize}
+\item Use ball-growth data already generated in stability tests
+\item Fit in range $r \in [2, K/4]$ to avoid finite-size effects
+\item Report $R^2$ of fit to assess quality of power-law scaling
+\end{itemize}
+
+\section{Gate 3: Super-Graph Connects to Physical Observables}
+
+\subsection{Test 3.1: Thread Bundles as ``Particles'' on the Cloth}
+
+\subsubsection*{What}
+Threads (sequences of events from BCQM IV/V) should map to trajectories on the super-graph that are local in the emergent geometry.
+
+\subsubsection*{Method}
+\begin{enumerate}
+\item Take a thread (sequence of events)
+\item Map each event to its community $\rightarrow$ sequence of super-graph nodes
+\item Check if thread-induced paths on super-graph are ``local'' (consecutive super-graph nodes are adjacent or close)
+\item Compute ``localization index'':
+\[
+\text{LOC} = \frac{\text{\# thread steps with super-graph hop distance} \leq 1}{\text{total \# thread steps}}
+\]
+\item Compare to random baseline: shuffle community assignments and recompute LOC
+\end{enumerate}
+
+\subsubsection*{Why It Matters}
+\textbf{This is the most important test in the validation plan.} If threads are physical (particle worldlines), they should be local on the emergent geometry. Random threads would hop randomly across the super-graph. Physical threads should trace out geodesic-like paths on the cloth. \textbf{This test directly establishes whether particles ``live on'' the emergent spacetime}---the core compatibility between quantum mechanics (threads) and general relativity (super-graph geometry).
+
+\subsubsection*{Pass Criterion}
+Threads show strong localization: $\text{LOC} > 0.70$, and significantly above random baseline ($p < 0.001$ in permutation test).
+
+\subsubsection*{Implementation Notes}
+\begin{itemize}
+\item Identify threads using BCQM V thread-formation algorithm
+\item For each thread, record sequence of communities visited
+\item Compute super-graph hop distance between consecutive community pairs
+\item Generate 1000 random permutations of community labels to establish baseline
+\end{itemize}
+
+\subsection{Test 3.2: Cross-Link Density as ``Interaction Strength''}
+
+\subsubsection*{What}
+Super-graph edge weights (number of Path A cross-links between communities) should correlate with physical interaction between threads in those communities.
+
+\subsubsection*{Method}
+\begin{enumerate}
+\item Identify ``interacting'' threads: threads that share events or are causally linked
+\item For each thread pair, record their home communities $(C_i, C_j)$
+\item Check if these communities are connected in super-graph, and record edge weight $w_{ij}$
+\item Compute correlation (Spearman $\rho$) between super-graph edge weight and thread interaction frequency
+\end{enumerate}
+
+\subsubsection*{Why It Matters}
+If the super-graph encodes spatial proximity, then threads in nearby communities (high $w_{ij}$) should interact more frequently. This tests whether cloth-level adjacency $\rightarrow$ micro-level interaction.
+
+\subsubsection*{Pass Criterion}
+Significant positive correlation: Spearman $\rho > 0.5$, $p < 0.01$.
+
+\subsubsection*{Implementation Notes}
+\begin{itemize}
+\item Define ``interaction'': threads that share $\geq 1$ event, or have causal links (event from thread A in causal past of event from thread B)
+\item Aggregate interaction counts across all thread pairs in same community pair
+\item Report scatterplot: $x = w_{ij}$, $y = \text{interaction count}$
+\end{itemize}
+
+\subsection{Test 3.3: Metric Reconstruction from Cross-Link Data}
+
+\subsubsection*{What}
+Use super-graph edge weights to define a proto-metric $g_{\mu\nu}$ on the cloth via metric embedding.
+
+\subsubsection*{Method}
+\begin{enumerate}
+\item Convert edge weight $w_{ij}$ to distance: $d_{ij} = 1/w_{ij}$ (or $d_{ij} = -\log w_{ij}$)
+\item Use metric embedding (MDS, Isomap, or force-directed layout) to assign coordinates $\{x_i\}$ to communities
+\item Check embedding quality: stress (residual error), embedding dimension $d_{\text{embed}}$
+\item Test if resulting metric has sensible properties: triangle inequality, smoothness
+\end{enumerate}
+
+\subsubsection*{Why It Matters}
+This is the ``metric extraction'' step needed for BCQM VII/VIII. If Path A cross-links encode spatial proximity, this should produce a consistent metric. If it fails, Path A might not be encoding geometry correctly.
+
+\subsubsection*{Pass Criterion}
+\begin{itemize}
+\item Metric embedding produces stable coordinates: stress $< 0.15$
+\item Embedding dimension $d_{\text{embed}} \leq 4$
+\item Coordinates stable across seeds (Procrustes alignment shows $>0.8$ similarity)
+\item Reconstructed metric approximately satisfies triangle inequality ($\eta > 0.90$)
+\end{itemize}
+
+\subsubsection*{Implementation Notes}
+\begin{itemize}
+\item Use \texttt{scikit-learn.manifold.MDS} or similar
+\item Try embedding dimensions $d \in \{2, 3, 4\}$, report which gives lowest stress
+\item For stability check: embed super-graphs from different seeds, align via Procrustes, compute coordinate RMSD
+\item \textbf{Note:} This test subsumes the non-trivial version of Test 2.2 (weighted triangle inequality)
+\end{itemize}
+
+\section{Gate 4: Scaling Behavior with $N$}
+
+\subsection{Test 4.1: Community Count Scaling}
+
+\subsubsection*{What}
+Determine how $K$ (community count) scales with $N$ at fixed $n$.
+
+\subsubsection*{Method}
+\begin{enumerate}
+\item Plot $K$ vs $N$ for $N \in \{4, 8, 16, 24, 32, 48, 64, 96, 128\}$ at fixed $n \in \{0.6, 0.8\}$
+\item Fit power law: $K = A \cdot N^\alpha$
+\item Extract scaling exponent $\alpha$ and goodness-of-fit $R^2$
+\end{enumerate}
+
+\subsubsection*{Why It Matters}
+If the super-graph is a ``finite-size cloth'', expect $K \sim N^\alpha$ with $\alpha < 1$ (sublinear). If every event is its own community, $K \sim N$ (bad---no coarse-graining). If communities merge well, expect $\alpha \approx 0.5$--0.7 (good coarse-graining).
+
+\subsubsection*{Pass Criterion}
+$K \sim N^\alpha$ with $\alpha < 0.8$, stable fit ($R^2 > 0.95$) across $n$ regimes.
+
+\subsubsection*{Implementation Notes}
+\begin{itemize}
+\item Average $K$ across seeds at each $N$
+\item Fit on log-log plot: $\log K$ vs $\log N$
+\item Report separate $\alpha$ for each $n$ regime
+\end{itemize}
+
+\subsection{Test 4.2: Spectral Dimension Convergence}
+
+\subsubsection*{What}
+Measure $d_s$ at multiple $N$, check for convergence as $N \to \infty$.
+
+\subsubsection*{Method}
+\begin{enumerate}
+\item Compute $d_s$ (from Test 2.1) at each $N \in \{4, 8, 16, 32, 64, 128\}$
+\item Plot $d_s(N)$ vs $N$
+\item Fit to asymptotic form: $d_s(N) = d_s^\infty + A/N^\beta$
+\item Check if $d_s$ flattens (derivative $\to 0$) by $N=128$
+\end{enumerate}
+
+\subsubsection*{Why It Matters}
+True emergent geometry should have $d_s$ that stabilizes at large $N$. If $d_s$ keeps drifting, the super-graph might be a system-size artifact rather than a genuine geometric object.
+
+\subsubsection*{Pass Criterion}
+$d_s(N)$ flattens: $|d_s(128) - d_s(64)| < 0.2$. Converges to asymptotic value $d_s^\infty \in [1.5, 4.5]$.
+
+\subsubsection*{Implementation Notes}
+\begin{itemize}
+\item Use same random walk protocol at all $N$
+\item Report error bars (standard deviation across seeds) at each $N$
+\end{itemize}
+
+\subsection{Test 4.3: Super-Graph Diameter Scaling}
+
+\subsubsection*{What}
+Measure graph diameter $D_{\max}$ of super-graph giant component as function of $N$.
+
+\subsubsection*{Method}
+\begin{enumerate}
+\item For each $N$, compute diameter $D_{\max}$ = longest shortest path in super-graph
+\item Plot $\log D_{\max}$ vs $\log N$ (or $\log K$)
+\item Fit scaling law: $D_{\max} \sim N^\gamma$ or $D_{\max} \sim \log N$
+\end{enumerate}
+
+\subsubsection*{Why It Matters}
+Expected scaling laws:
+\begin{itemize}
+\item Small-world network: $D_{\max} \sim \log K \sim \log N$
+\item Spatial network in $d$ dimensions: $D_{\max} \sim N^{1/d}$
+\end{itemize}
+If super-graph has emergent dimensionality $d$, diameter should scale like $N^{1/d}$. This tests whether the cloth has spatial structure vs just being well-connected.
+
+\subsubsection*{Pass Criterion}
+Clear scaling law ($R^2 > 0.90$), consistent with $d = 2$--4. Example: $D_{\max} \sim N^{1/3}$ suggests $d \approx 3$.
+
+\subsubsection*{Implementation Notes}
+\begin{itemize}
+\item Use NetworkX \texttt{diameter()} or \texttt{eccentricity()} functions
+\item If disconnected, compute diameter of giant component only
+\item Average across seeds at each $N$
+\end{itemize}
+
+\section{Implementation: 3-Phase Plan (Revised)}
+
+\subsection{Phase 1: Core Validation (Weeks 1--2)}
+
+\textbf{Priority tests (revised based on methodological review):}
+\begin{enumerate}
+\item \textbf{Test 2.4: Ball-growth effective dimension} (most robust for small $K$, data already available)
+\item \textbf{Test 3.1: Thread localization} (most important conceptual validation---establishes physics connection)
+\item \textbf{Test 4.1: Community count scaling} (validates coarse-graining is occurring)
+\item \textbf{Test 2.1: Spectral dimension} (OPTIONAL---informative but noisy at $N=8$)
+\end{enumerate}
+
+\textbf{Tests DEFERRED from Phase 1:}
+\begin{itemize}
+\item triangle inequality (unweighted)---tautological for unweighted graphs; merge into Test 3.3 in Phase 3
+\end{itemize}
+
+\textbf{Datasets:}
+\begin{itemize}
+\item Use existing $N \in \{4, 8\}$, $n \in \{0.4, 0.8\}$, 5 seeds each
+\item Add $N=16$ if time permits (from scaling benchmark)
+\end{itemize}
+
+\textbf{Deliverable:}
+\begin{itemize}
+\item Short report: ``Super-graph is geometric and physical''
+\item 3 core measures: $d_{\text{eff}}$ (geometry), LOC (physics), $\alpha$ (coarse-graining)
+\item Decision point: If all three pass, proceed to Phase 2. If Test 3.1 (thread localization) fails, major red flag---geometry may not be where physics lives.
+\end{itemize}
+
+\subsection{Phase 2: Extended Validation (Weeks 3--4)}
+
+\textbf{Priority tests:}
+\begin{enumerate}
+\item Test 3.2: Cross-link density vs interaction (validates Path A mechanism)
+\item Test 2.1: Spectral dimension at larger $N$ (if deferred from Phase 1)
+\item Test 4.2: Spectral dimension convergence (requires multiple $N$ runs)
+\end{enumerate}
+
+\textbf{Datasets:}
+\begin{itemize}
+\item Extend to $N \in \{4, 8, 16, 32\}$ for scaling tests
+\item Use 5--10 seeds per $N$ at $n \in \{0.6, 0.8\}$
+\end{itemize}
+
+\textbf{Deliverable:}
+\begin{itemize}
+\item Report: ``Path A mechanism connects cloth to micro-dynamics''
+\item Evidence that cross-link strength predicts thread interactions
+\item Decision point: If tests pass, Path A is validated. Proceed to full N-scan or Phase 3 deep validation.
+\end{itemize}
+
+\subsection{Phase 3: Advanced Validation (Weeks 5--6, Optional)}
+
+\textbf{Deep tests (if Phase 1--2 pass):}
+\begin{enumerate}
+\item Test 2.3: Curvature distribution (claim geometric richness)
+\item Test 3.3: Metric reconstruction (extract explicit $g_{\mu\nu}$, includes weighted triangle inequality check)
+\item Test 4.3: Super-graph diameter scaling (spatial vs small-world)
+\end{enumerate}
+
+\textbf{Datasets:}
+\begin{itemize}
+\item Full $N$-scan: $N \in \{8, 16, 24, 32, 48, 64\}$ (stop before $N=128$ for now)
+\item 10--30 seeds per $N$ depending on computational cost
+\end{itemize}
+
+\textbf{Deliverable:}
+\begin{itemize}
+\item Full validation report: ``Path A as geometric mechanism''
+\item Complete evidence package for BCQM VI paper
+\item Readiness for $N=128$ production runs and BCQM VII metric extraction
+\end{itemize}
+
+\section{Success Criteria by Strength}
+
+\subsection{Minimal Viable Result (Sufficient for BCQM VI)}
+
+\begin{itemize}
+\item Effective dimension $d_{\text{eff}}$ from ball growth in physical range ($d_{\text{eff}} \in [1.5, 4.5]$, std dev $<15\%$)
+\item Thread localization significantly above random (LOC $> 0.7$, $p < 0.001$)
+\item Community count scaling sublinear: $K \sim N^\alpha$ with $\alpha < 0.8$
+\end{itemize}
+
+\textbf{Interpretation:} Path A creates stable coarse-grained structure with geometric properties that particles respect. Sufficient to publish as ``mechanism exploration'' paper.
+
+\subsection{Strong Result (Supports BCQM VII Continuation)}
+
+All minimal criteria, plus:
+\begin{itemize}
+\item Spectral dimension $d_s$ finite and stable at $N \geq 32$ ($d_s \in [1.5, 4]$, std dev $<10\%$)
+\item Cross-link density predicts thread interaction: Spearman $\rho > 0.5$
+\item Triangle inequality holds for weighted distances: $\eta > 0.95$
+\end{itemize}
+
+\textbf{Interpretation:} Super-graph is genuine emergent geometry encoding physical proximity. Strong justification for metric extraction in BCQM VII.
+
+\subsection{Publication-Grade Result}
+
+All strong criteria, plus:
+\begin{itemize}
+\item Non-trivial curvature distribution (not flat, stable across seeds)
+\item Successful metric embedding: stress $< 0.15$, $d_{\text{embed}} \leq 4$
+\item Clear scaling laws with $N$: $d_s$ converges, diameter scales as $N^{1/d}$
+\end{itemize}
+
+\textbf{Interpretation:} Path A generates emergent spacetime with identifiable dimensionality, curvature, and metric structure. Publication target: PRL, PRD, or similar high-impact venue.
+
+\section{Timeline and Resource Requirements}
+
+\subsection{Computational Resources}
+
+\begin{itemize}
+\item \textbf{Phase 1--2:} Can run on existing hardware (laptop or single Mac Mini)
+\item \textbf{Phase 3:} May require Mac Mini cluster if extending to $N=64$
+\item \textbf{Scaling benchmark:} Run before committing to Mac Mini purchase
+\end{itemize}
+
+\subsection{Timeline}
+
+\begin{tabular}{ll}
+\toprule
+\textbf{Phase} & \textbf{Duration} \\
+\midrule
+Phase 1 (Core validation) & 2 weeks \\
+Decision point 1 & 2 days \\
+Phase 2 (Extended validation) & 2 weeks \\
+Decision point 2 & 2 days \\
+Phase 3 (Advanced validation, optional) & 2 weeks \\
+Final report \& BCQM VI draft outline & 1 week \\
+\midrule
+\textbf{Total} & \textbf{6--9 weeks} \\
+\bottomrule
+\end{tabular}
+
+\subsection{Decision Points}
+
+\textbf{After Phase 1:}
+\begin{itemize}
+\item If core tests pass (geometry + physics + coarse-graining) $\rightarrow$ proceed to Phase 2
+\item If Test 3.1 (thread localization) fails $\rightarrow$ \textbf{major concern}---super-graph may be geometric artifact not connected to physics; diagnose or consider pivot
+\item If Test 2.4 or 4.1 fail $\rightarrow$ diagnose (implementation bug? wrong coarse-graining? Path A insufficient?)
+\end{itemize}
+
+\textbf{After Phase 2:}
+\begin{itemize}
+\item If extended tests pass $\rightarrow$ Path A validated, proceed to full N-scan or Phase 3 deep validation
+\item If physics tests fail $\rightarrow$ super-graph is geometric but not physical; consider pivot to alternative cross-link mechanism
+\end{itemize}
+
+\section{Next Immediate Actions (Revised)}
+
+\begin{enumerate}
+\item \textbf{This weekend:} Implement Test 2.4 (ball-growth dimension extraction) on existing data---quick win, no new runs needed, most robust for small $K$
+\item \textbf{Early next week:} Implement Test 3.1 (thread localization)---\textbf{highest priority conceptual validation}, uses existing thread + community data
+\item \textbf{Mid next week:} Implement Test 4.1 (community scaling $K$ vs $N$)---quick check on coarse-graining using $N \in \{4, 8\}$ data
+\item \textbf{Optional:} Implement Test 2.1 (spectral dimension)---informative but expect noisy results at $N=8$; do not treat as blocking
+\item \textbf{Week 2:} Analyze Phase 1 results, decision point 1
+\item \textbf{Week 3--4:} Implement Phase 2 tests (interactions, convergence)
+\item \textbf{Week 5:} Decision point 2, plan full N-scan or Phase 3
+\end{enumerate}
+
+\section*{Conclusion}
+
+This test plan (revised after methodological review) provides a systematic path to validate that the super-graph is not just stable (Gate 1, already passed), but genuinely geometric (Gate 2), physically meaningful (Gate 3), and scalable (Gate 4). 
+
+\textbf{Key revisions:}
+\begin{itemize}
+\item Prioritized Test 3.1 (thread localization) as the conceptual linchpin---it directly tests whether particles live on the emergent geometry
+\item Promoted Test 2.4 (ball-growth dimension) as the primary Phase 1 geometry diagnostic---more robust than spectral dimension at small $K$
+\item Flagged triangle inequality (unweighted) as tautological for unweighted graphs; deferred to Phase 3
+\item Added finite-size warnings for Test 2.1 (spectral dimension) at $N=8$
+\end{itemize}
+
+Completion of Phase 1 (minimal viable result) establishes that Path A creates geometric structure that particles respect---sufficient to justify continuing and drafting BCQM VI. Completion of Phases 2--3 (publication-grade result) provides strong evidence for emergent spacetime and supports transition to BCQM VII metric extraction work.
+
+\vspace{1em}
+\noindent\textbf{Status:} Ready to begin Phase 1 implementation using existing $N \in \{4, 8\}$ data. Priority order: Test 2.4 $\rightarrow$ Test 3.1 $\rightarrow$ Test 4.1.
+
+\end{document}
+```
+

@@ -1,0 +1,123 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{enumitem}
+\setlist{nosep}
+
+\title{BCQM VII Stage--2 Cloth: A Plain-Language Walkthrough\\From events and threads to bin-coarsened persistence tests (v0.1)}
+\author{Peter M.~Ferguson \\ \textit{Independent Researcher}}
+\date{30 January 2026}
+
+\begin{document}
+\emergencystretch=2em
+\sloppy
+\maketitle
+
+\section*{How this note relates to the previous one}
+This note is a continuation of the previous checkpoint write-up. The earlier checkpoint captured the formal result of the bin-coarsening experiment. Here we explain, at a plain-language level, what we did and why, in a way intended for a reader who has not read any BCQM papers.
+
+\section*{What problem we are trying to solve}
+BCQM is a programme that treats \emph{spacetime as emergent}. Rather than assuming a background manifold with coordinates, one starts from a pre-spacetime primitive: \textbf{events} (featureless nodes) and \textbf{directed connections} (edges) produced by the evolution of \textbf{threads}. A thread is a minimal dynamical entity that advances step-by-step, selecting the next event according to a rule. When multiple threads share or re-use events, they create cross-links, and a nontrivial event graph builds up.
+
+Stage--1 (BCQM VI) showed that a short, moving ``active slice'' of this graph can become connected (\emph{space on}) while coherent ``islands'' can remain intermittent (\emph{islands fluctuate}). It also showed that the active slice mixes rapidly and can behave like ``channels + shortcuts''. This means that some standard continuum diagnostics (for example, dimension estimates from random-walk return probabilities) can be structurally unreliable at that scale.
+
+Stage--2 asks: if the active slice is ``yarn'' (short, local, fast-mixing), can we construct a more persistent object---a \textbf{cloth}---from long runs, and then ask metric/dimension-style questions on that cloth?
+
+\section*{The primitives in one minute}
+\begin{itemize}
+\item \textbf{Events:} nodes in a directed graph; no coordinates are assumed.
+\item \textbf{Threads:} each thread advances by selecting a next event; this produces directed edges as it goes.
+\item \textbf{Cross-links (Path A):} a thread can either create a fresh event or re-use an existing event from a current active window. Re-use creates additional adjacency and can drive percolation (connectivity).
+\item \textbf{Glue / lockstep:} when threads become synchronised (in phase and/or cadence), they form a coherent bundle. In Stage--1, this provides an operational ``clock quality'' observable.
+\end{itemize}
+
+\section*{What ``persistence'' means in Stage--2}
+A persistent cloth should not be a one-off snapshot; it should be extracted from repeated behaviour. The simplest idea is to treat ``persistence'' as repeated use of the same structures over time. However, there is a trap: if we store weights on the events themselves (traffic counts, edge weights), we can quietly drift away from a minimal primitive ontology.
+
+So we explored minimalism-preserving persistence proxies:
+\begin{itemize}
+\item \textbf{Lockstep-supported persistence:} define a ``core'' set of threads (those in the dominant coherent bundle) and focus on what they repeatedly use.
+\item \textbf{Survival-under-perturbation:} do not trust a single run; stability must be demonstrated across seeds and small perturbations.
+\item \textbf{Concurrency:} within a finite time bin, if multiple threads traverse the same directed transition, that indicates short-run channelisation. Concurrency can be logged without mutating primitives.
+\end{itemize}
+
+\section*{Bin-based cloth extraction}
+We chose bin-based processing as the first implementation because ``tick'' is too fine: it captures microscopic jitter rather than stable structure.
+
+In each run we divide the measurement interval into a fixed number of bins (initially 80). Within each bin we record:
+\begin{itemize}
+\item which \textbf{events} were used, and by how many threads;
+\item which \textbf{directed edges} \((u\to v)\) were traversed, and by how many threads;
+\item a split between \textbf{all threads} and \textbf{core (lockstep) threads}.
+\end{itemize}
+
+From those per-bin records we derive two distinct signals:
+\begin{enumerate}[label=\arabic*.]
+\item \textbf{Concurrency (channel activity):} an event/edge is ``concurrent'' in a bin if its count is at least 2 in that bin.
+\item \textbf{Bin-hits (route carving):} an event/edge is ``persistent'' if it appears in at least \(h_{\min}\) bins (min\_bin\_hits). This is a long-run criterion.
+\end{enumerate}
+
+\subsection*{A useful mental model}
+Concurrency is closer to \emph{channel activity} than to \emph{cloth}. The hierarchy that emerged from the experiments is:
+\begin{itemize}
+\item \textbf{Edge concurrency} $\Rightarrow$ ``channel is active now'' (short-run funneling).
+\item \textbf{Used-by-core bin hits} $\Rightarrow$ ``channel is carved'' (routes repeated across bins).
+\item \textbf{Cloth core} $\Rightarrow$ ``carved channels form a stable background'' (persistence across longer epochs / stricter thresholds).
+\end{itemize}
+At limited sampling, it is unsurprising that concurrency does not immediately yield a stable cloth backbone: cloth is a long-run stabilisation object.
+
+\section*{What we tried first, and what it taught us}
+\subsection*{Concurrent-only edges are too sparse}
+We initially tried to define an edge cloth using \emph{concurrent edges only} (edges used by at least two threads within the same bin). Empirically, this signal is real but sparse. It tends not to repeat across bins at the current scales, so strict persistence requirements eliminate it.
+
+\subsection*{Refinement: ``edges used by the lockstep core''}
+We therefore refined the edge cloth definition:
+\begin{itemize}
+\item Concurrency is retained as a reinforcement diagnostic.
+\item The edge cloth core is defined from \textbf{edges used by core threads}, counting per-bin presence (``bin hits'').
+\end{itemize}
+This produces connected edge cloths under permissive persistence (hits1), while preserving the minimalism story (no weights stored on primitives).
+
+\section*{How we evaluated ``stability''}
+Two different notions of stability were measured across seeds:
+\begin{enumerate}[label=\arabic*.]
+\item \textbf{Set stability (Jaccard):} do the exact core sets match across seeds?
+\[
+J(A,B)=\frac{|A\cap B|}{|A\cup B|}.
+\]
+We compute this for the core event set and the core edge set.
+\item \textbf{Metric stability (ball growth):} do the \emph{geometry diagnostics} match across seeds even if the exact edges differ? We compare normalised ball-growth curves \(|B(r)|/|C|\) using an L2 distance between curves.
+\end{enumerate}
+
+\section*{What the long-epoch and bin-coarsening experiments showed}
+We ran long-epoch ensembles (x5 and x10) and then coarsened binning to see whether strict persistence failures were simply a binning artefact.
+
+\subsection*{Key outcome}
+\begin{itemize}
+\item A permissive definition (hits1) yields a \textbf{connected cloth} and \textbf{extremely stable geometry diagnostics} (ball-growth curves) at high cross-link pressure. Exact edge identity remains seed-sensitive, but the geometry class is stable.
+\item A strict definition (hits2) yields \textbf{tiny recurrent pockets} (motifs) rather than a spanning cloth, even at longer epochs and with bin coarsening. This behaviour is not primarily a binning artefact; it is a property of the strict persistence rule at this scale.
+\end{itemize}
+
+\section*{Where this leaves Stage--2}
+At the current scale, strict cross-bin repetition (hits2) behaves as a \emph{motif detector}, while hits1 behaves as a workable \emph{cloth baseline}. This is not a failure: it tells us that stability emerges first at the level of \emph{geometry diagnostics} rather than at the level of exact microstructure.
+
+\section*{Immediate next directions}
+There are two minimalism-preserving ways forward if a stricter-than-hits1 cloth backbone is required:
+\begin{enumerate}[label=\arabic*.]
+\item \textbf{Event-filtered edge cores:} define persistent events first, then define edge cloth only between persistent events.
+\item \textbf{Quantile persistence:} keep the top \(q\)\% most-used core edges over an epoch, rather than requiring explicit cross-bin repetition.
+\end{enumerate}
+Both approaches aim to stabilise edge cloth structure without writing mutable weights into primitives.
+
+\end{document}

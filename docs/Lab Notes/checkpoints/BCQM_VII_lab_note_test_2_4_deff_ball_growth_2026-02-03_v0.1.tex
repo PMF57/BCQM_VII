@@ -1,0 +1,93 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage{amsmath,amssymb}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{enumitem}
+\setlist{nosep}
+
+\title{BCQM VII Lab Note\\Test 2.4: Effective dimensionality from ball growth (\texorpdfstring{$d_{\mathrm{eff}}$}{d_eff}) (v0.1)}
+\author{Peter M.~Ferguson \\ \textit{Independent Researcher}}
+\date{3 February 2026}
+
+\begin{document}
+\emergencystretch=2em
+\sloppy
+\maketitle
+
+\section*{Purpose}
+Document the Stage--2 ``Beyond Stability'' Test 2.4: estimate an effective dimensionality \(d_{\mathrm{eff}}\) from ball growth, and record the outcome for cloth-level and super-graph-level objects.
+
+\section*{Inputs}
+This test uses existing run outputs; no new simulations were required. The analysis reads \texttt{RUN\_METRICS\_*.json} and uses:
+\begin{itemize}
+\item \textbf{Cloth object:} \texttt{RUN\_METRICS["cloth"]["ball\_growth"]} \ ...
+\item \textbf{Super-graph object:} community detection on the undirected projection of the hits1 cloth core edge set (\texttt{core\_edges\_used}), then build the corresponding community super-graph and compute its ball growth.
+\end{itemize}
+
+The analysis script used was:
+\begin{itemize}
+\item \path{bcqm\_vii\_cloth/analysis/d\_eff\_ball\_growth.py}
+\end{itemize}
+
+\section*{Method}
+Ball growth provides a curve \(|B(r)|\) (mean ball volume at radius \(r\)). We estimate an effective exponent \(d_{\mathrm{eff}}\) by fitting
+\[
+\log|B(r)| \approx d_{\mathrm{eff}}\log r + c
+\]
+over an automatically chosen window that (i) excludes very small \(r\), (ii) avoids near-saturation where \(|B(r)| \approx |C|\), and (iii) has at least a minimum number of contiguous radii.
+
+We report the chosen window \([r_{\mathrm{lo}}, r_{\mathrm{hi}}]\) and fit quality via \(R^2\). If no admissible window exists, \(d_{\mathrm{eff}}\) is reported as \texttt{NaN} (undefined).
+
+\section*{Runs analysed}
+\begin{itemize}
+\item Cloth: A3 scale-ups at \(n=0.8\), hits1, x10 epoch, bins=20:
+  \begin{itemize}
+  \item \(N=16\): \path{gateA3\_N16\_hits1\_x10\_bins20\_n0p8}
+  \item \(N=32\): \path{gateA3\_N32\_hits1\_x10\_bins20\_n0p8}
+  \end{itemize}
+\item Super-graph: Pivot baseline ensemble (hits1, x10 epoch, bins=20, \(N\in\{4,8\}\), \(n\in\{0.4,0.8\}\)):
+  \begin{itemize}
+  \item \path{ensemble\_W100\_N4N8\_hits1\_x10\_bins20}
+  \end{itemize}
+\end{itemize}
+
+\section*{Results}
+\subsection*{Cloth: no usable scaling window at high connectivity}
+For the cloth object at \(n=0.8\) (both \(N=16\) and \(N=32\)), the window selection finds no admissible intermediate scaling region, and \(d_{\mathrm{eff}}\) is undefined (\texttt{NaN}) for all seeds. This remains true even under progressively loosened selection parameters (``loose'' and ``ultra-loose'' attempts).
+
+\paragraph{Interpretation.}
+In the high-\(n\) hits1 cloth regime, the cloth core saturates extremely rapidly: \(|B(r)|/|C|\) reaches unity at very small radius (often \(r\le 2\)). This indicates a small-world/shortcut-rich cloth at the primitive edge level. Under such rapid saturation there is no intermediate window where \(|B(r)| \sim r^d\) holds over multiple consecutive radii, so a power-law \(d_{\mathrm{eff}}\) estimate is not a meaningful diagnostic at the cloth level in this regime.
+
+\subsection*{Super-graph: stable effective exponents with excellent fit quality}
+At the community super-graph level, the same fitting procedure yields stable effective exponents with excellent fit quality (very high \(R^2\)). The fitted window is short but consistent (typically \(r\approx 3\)--6), reflecting finite-size constraints at \(K\sim 20\)--30 for the super-graph.
+
+\paragraph{Interpretation.}
+The coarse-grained community super-graph is sparse enough to admit an intermediate growth window, making \(d_{\mathrm{eff}}\) a meaningful diagnostic at this scale. This supports the Stage--2 pivot: geometry-like scaling behaviour can be clearer on coarse objects than on molecular edge sets.
+
+\section*{Outcome and decision}
+\begin{itemize}
+\item Cloth-level \(d_{\mathrm{eff}}\) (power-law fit) is \textbf{undefined} in the high-\(n\) hits1 cloth regime due to immediate saturation. This should be reported as a diagnostic signature (small-world cloth) rather than treated as a failure.
+\item Super-graph \(d_{\mathrm{eff}}\) is \textbf{defined} and stable with excellent fit quality, and is therefore the preferred effective-dimensionality diagnostic at this stage.
+\item If a cloth-level effective dimension is required later, it should be sought either (i) in weaker-connectivity regimes where saturation is delayed, or (ii) via alternative diagnostics (e.g.\ local-slope curves) designed for rapid saturation.
+\end{itemize}
+
+\section*{Generated artefacts}
+The following CSV outputs were produced by the analysis:
+\begin{itemize}
+\item \path{gateA3\_N16\_cloth\_d\_eff\_runs.csv} and \path{gateA3\_N16\_cloth\_d\_eff\_summary.csv}
+\item \path{gateA3\_N32\_cloth\_d\_eff\_runs.csv} and \path{gateA3\_N32\_cloth\_d\_eff\_summary.csv}
+\item \path{gateA3\_N32\_cloth\_loose\_d\_eff\_runs.csv} and \path{gateA3\_N32\_cloth\_loose\_d\_eff\_summary.csv}
+\item \path{gateA3\_N32\_cloth\_ultra\_loose\_d\_eff\_runs.csv} and \path{gateA3\_N32\_cloth\_ultra\_loose\_d\_eff\_summary.csv}
+\item \path{pivot\_supergraph\_deff\_d\_eff\_runs.csv} and \path{pivot\_supergraph\_deff\_d\_eff\_summary.csv}
+\end{itemize}
+
+\end{document}

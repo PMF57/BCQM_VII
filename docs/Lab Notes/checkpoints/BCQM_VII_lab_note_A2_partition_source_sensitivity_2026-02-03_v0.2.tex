@@ -1,0 +1,115 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{enumitem}
+\setlist{nosep}
+
+\title{BCQM VII Lab Note\\A2: Partition-source sensitivity (core/core vs all/all) (v0.1)}
+\author{Peter M.~Ferguson \\ \textit{Independent Researcher}}
+\date{3 February 2026}
+
+\begin{document}
+\emergencystretch=2em
+\sloppy
+\maketitle
+
+\section*{Purpose}
+Record the A2 ``stake-in-the-ground'' sensitivity test: determine how the Stage--2 pivot metrics (Gates 1--3) depend on whether the community partition and super-graph are constructed from (i) \textbf{core-only} cloth edges (core/core) or (ii) \textbf{all-used} edges (core+halo; all/all). This resolves an ambiguity exposed by Gate--4 localisation at larger \(N\): for trajectories, all-used sources can be needed for coverage, but for geometry it may not be desirable.
+
+\section*{Data and scripts used}
+\paragraph{Dataset.}
+The baseline ensemble used was the Stage--2 pivot dataset:
+\begin{itemize}
+\item hits1, x10 epoch, bins=20, \(W_{\mathrm{coh}}=100\), seeds 56791--56795
+\item \(N\in\{4,8\}\), \(n\in\{0.4,0.8\}\)
+\item run folder: \path{outputs_cloth/ensemble_W100_N4N8_hits1_x10_bins20}
+\end{itemize}
+
+\paragraph{CSV inputs (A2.zip).}
+This lab note is based on two output folders (zipped for transfer):
+\begin{itemize}
+\item \path{csv/A2_core_core/}:
+  \begin{itemize}
+  \item \path{community_partition_stability.csv}
+  \item \path{supergraph_edge_stability.csv}
+  \item \path{supergraph_ballgrowth_stability.csv}
+  \end{itemize}
+\item \path{csv/A2_all_all/}:
+  \begin{itemize}
+  \item \path{community_partition_stability.csv}
+  \item \path{supergraph_edge_stability.csv}
+  \item \path{supergraph_ballgrowth_stability.csv}
+  \end{itemize}
+\end{itemize}
+
+\paragraph{Scripts.}
+A2 used the A2-enabled analysis scripts (no simulation reruns). The A2 variants add an \texttt{edge\_source} switch to select either core-only edges or core+halo (all-used) edges:
+\begin{itemize}
+\item \path{bcqm_vii_cloth/analysis/community_cloth_stability_A2.py} (adds \texttt{--edge\_source core} or \texttt{--edge\_source all})
+\item \path{bcqm_vii_cloth/analysis/supergraph_edge_stability_A2.py} (adds \texttt{--edge\_source core} or \texttt{--edge\_source all})
+\item \path{bcqm_vii_cloth/analysis/community_cloth_stability.py} (super-graph ball-growth stability from the same dataset; unchanged script)
+\end{itemize}
+
+\section*{Summary of results}
+Table~\ref{tab:a2} summarises the key deltas between core/core and all/all, quadrant by quadrant. Quantities are mean values across seed pairs (5 seeds \(\Rightarrow\) 10 pairs).
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{@{}cccccccc@{}}
+\toprule
+\(N\) & \(n\) &
+\(K_{\mathrm{core}}\) & \(K_{\mathrm{all}}\) &
+\(\mathrm{NMI}_{\mathrm{core}}\) & \(\mathrm{NMI}_{\mathrm{all}}\) &
+\(d_{\mathrm{L2,core}}\) & \(d_{\mathrm{L2,all}}\) \\
+\midrule
+4 & 0.4 & 44.2 & 24.4 & 0.833 & 0.810 & 0.0219 & 0.0545 \\
+4 & 0.8 & 22.4 & 22.4 & 0.834 & 0.834 & 0.0170 & 0.0170 \\
+8 & 0.4 & 75.4 & 23.8 & 0.838 & 0.822 & 0.0085 & 0.0162 \\
+8 & 0.8 & 22.4 & 22.4 & 0.835 & 0.835 & 0.0235 & 0.0235 \\
+\bottomrule
+\end{tabular}
+\caption{A2 sensitivity summary: core/core vs all/all. Here \(K\) is the mean community count, NMI is partition similarity across seeds, and \(d_{\mathrm{L2}}\) is the mean L2 distance between normalised super-graph ball-growth curves across seeds. Full CSVs are listed in the text.}
+\label{tab:a2}
+\end{table}
+
+\paragraph{Gate 2 invariance.}
+Super-graph edge stability (unweighted Jaccard) and weight correlations are unchanged between core/core and all/all for this dataset. That is, including halo edges does not change the set of community-to-community connections or their relative flow strengths as measured by Gate 2. This indicates that the stable mesoscopic flow skeleton is already captured by the core edges alone.
+
+\paragraph{Low-\(n\) sensitivity (n=0.4).}
+At low cross-link pressure, the choice of edge source matters:
+\begin{itemize}
+\item The all/all construction collapses the super-graph to a much smaller connected component (mean component size drops to \(\sim 24\) communities for \(N=8\)), and the geometry diagnostic becomes noisier (ball-growth stability degrades).
+\item The core/core construction yields a larger, richer super-graph (higher \(K\) and larger GCC) and more stable ball-growth curves across seeds.
+\end{itemize}
+Interpretation: at \(n=0.4\) the halo edges act primarily as ``closing'' edges that reduce fragmentation and can short-cut the community graph, but this does not improve reproducible geometry; instead it increases variability in the derived super-graph ball-growth curves.
+
+\paragraph{High-\(n\) robustness (n=0.8).}
+At high cross-link pressure, core/core and all/all become equivalent: \(K\), NMI/ARI, super-graph edge stability, and super-graph ball-growth stability are the same. This is consistent with the high-\(n\) regime being dominated by the coherent core, with relatively little independent halo structure.
+
+\section*{Methodological conclusion (recommended defaults)}
+A2 resolves the ``which graph?'' ambiguity into a clean practice:
+\begin{itemize}
+\item \textbf{Gates 1--3 (geometry object definition):} use \textbf{core/core} by default, especially at low \(n\), because it preserves a richer super-graph and yields more stable super-graph geometry diagnostics.
+\item \textbf{Gate 4 (trajectory/localisation tests):} use \textbf{all/all} by default when needed for coverage, and explicitly report the mapping coverage fraction. This is particularly important at larger \(N\) or weaker regimes where core-only partitions may not cover the traced event IDs.
+\end{itemize}
+
+\section*{Next steps}
+\begin{enumerate}[label=\arabic*.]
+\item Incorporate this A2 conclusion into the Stage--2 pivot record and the ``Beyond Stability'' plan as a methodological note.
+\item For publication clarity, add a short ``graph-choice'' subsection explaining why core/core is the geometry object and all/all is the localisation substrate (coverage).
+\item Optional: repeat A2 at N=16 or N=32 if later needed, but the key qualitative behaviour is already established here.
+\end{enumerate}
+
+\end{document}

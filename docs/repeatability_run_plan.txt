@@ -1,0 +1,43 @@
+BCQM VII Stage-2 repeatability check (chosen minimal run)
+
+Goal
+- Test whether two consecutive runs with different RNG seeds produce materially different *mesoscopic* outputs
+  (core fraction Φ, Q_clock stability, ball-growth stability, and Gate-4 hop locality), even though microstructure differs.
+
+What to run (headline case)
+- N = 32, n = 0.8, hits1, x10 epoch, bins = 20, 5 seeds per run.
+- Two scans: repA and repB differ only by seeds.start and output directory.
+
+Files provided
+- gateA3_N32_hits1_x10_bins20_n0p8_repA.yml
+- gateA3_N32_hits1_x10_bins20_n0p8_repB.yml
+- repeatability_compare.py
+
+Commands (from repo root)
+1) Run the two scans:
+   python3 -m bcqm_vii_cloth.cli scan --config configs_stage2/gateA3_N32_hits1_x10_bins20_n0p8_repA.yml
+   python3 -m bcqm_vii_cloth.cli scan --config configs_stage2/gateA3_N32_hits1_x10_bins20_n0p8_repB.yml
+
+2) Summarise RUN_METRICS to CSVs:
+   mkdir -p csv/repeatability
+   python3 bcqm_vii_cloth/analysis/summarise_runs.py \
+     --run_dir outputs_cloth/gateA3_N32_hits1_x10_bins20_n0p8_repA \
+     --out_dir csv/repeatability --tag repA
+   python3 bcqm_vii_cloth/analysis/summarise_runs.py \
+     --run_dir outputs_cloth/gateA3_N32_hits1_x10_bins20_n0p8_repB \
+     --out_dir csv/repeatability --tag repB
+
+3) Gate-4 hop localisation (all/all partition and supergraph, res=1.0):
+   python3 bcqm_vii_cloth/analysis/gate4_thread_localisation.py \
+     --run_dir outputs_cloth/gateA3_N32_hits1_x10_bins20_n0p8_repA \
+     --out_dir csv/repeatability --tag repA --partition_source all --supergraph_source all --resolution 1.0
+   python3 bcqm_vii_cloth/analysis/gate4_thread_localisation.py \
+     --run_dir outputs_cloth/gateA3_N32_hits1_x10_bins20_n0p8_repB \
+     --out_dir csv/repeatability --tag repB --partition_source all --supergraph_source all --resolution 1.0
+
+4) Compare:
+   python3 bcqm_vii_cloth/analysis/repeatability_compare.py
+
+Outputs
+- csv/repeatability/repeatability_compare_table.csv
+- figures/fig_repeatability_repA_vs_repB.pdf

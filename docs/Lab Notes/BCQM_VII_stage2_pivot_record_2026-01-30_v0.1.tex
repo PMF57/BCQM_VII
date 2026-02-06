@@ -1,0 +1,109 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{enumitem}
+\setlist{nosep}
+
+\title{BCQM VII Draft Insert\\Stage--2 Pivot Record: From molecular edges to cloth communities (v0.1)}
+\author{Peter M.~Ferguson \\ \textit{Independent Researcher}}
+\date{2nd February 2026}
+
+\begin{document}
+\emergencystretch=2em
+\sloppy
+\maketitle
+
+\section*{How to use this document}
+This is a \emph{partial draft insert} intended to capture a specific Stage--2 decision point in BCQM VII while the computational evidence is fresh. It can be pasted into the eventual BCQM VII paper as a section (or appendix) documenting (i) the empirical trigger, (ii) the failed ``rescue'' attempts, and (iii) the pivot to the next geometry object.
+
+\section{Stage--2 pivot record (cloth geometry)}
+\subsection{Motivation}
+Stage--1 (BCQM VI) established that the active slice \(V_{\mathrm{active}}(t)\) is a fast-mixing, ``channels + shortcuts'' object and that return-probability spectral dimension is structurally unstable there; ball growth is the robust geometry diagnostic. Stage--2 in BCQM VII set out to define a persistent geometry object (``cloth'') beyond \(V_{\mathrm{active}}(t)\), extracted from long runs with minimal additional assumptions.
+
+The initial Stage--2 working hypothesis was that a cloth backbone might be identified by \emph{persistent directed edges} (``roads'') used by the lockstep-supported core, with concurrency retained as a separate short-run channel activity indicator.
+
+\subsection{Empirical trigger: microstructure instability versus metric stability}
+Ensembles (5 seeds per quadrant) demonstrated a robust pattern:
+\begin{itemize}
+\item Event-level cloth cores (persistent ``places'') become highly stable at high cross-link pressure (e.g.\ \(n=0.8\)), with high Jaccard overlap across seeds under permissive persistence.
+\item Edge-level identity is strongly seed-sensitive: exact core edge sets exhibit near-zero Jaccard overlap across seeds, even when the cloth core is connected.
+\item Despite edge identity instability, the \emph{geometry diagnostic} on the connected cloth (ball-growth fraction \(|B(r)|/|C|\)) can be highly stable across seeds in the high-\(n\) regime.
+\end{itemize}
+This indicates that stability emerges first at the level of \emph{geometry class} (diagnostics) rather than at the level of exact edge microstructure, at least at the current scale.
+
+\subsection{Attempted rescues and negative results}
+A stricter persistence rule was tested to see whether edge microstructure could be stabilised:
+\begin{itemize}
+\item hits1: \texttt{min\_bin\_hits}=1 produced connected cloth cores and excellent metric stability but poor edge-set Jaccard.
+\item hits2: \texttt{min\_bin\_hits}=2 isolated tiny recurrent pockets (motifs) rather than a spanning cloth, yielding small components and poor or trivial stability.
+\end{itemize}
+
+Two ``rescue'' strategies were attempted for hits2:
+\begin{enumerate}[label=\arabic*.]
+\item \textbf{Longer epochs} (x5 and x10). Longer runs increased sample size but did not convert hits2 into a connected backbone: the strict edge core remained a collection of small recurrent motifs, and exact edge identity remained seed-sensitive.
+\item \textbf{Bin coarsening} (x10 with fewer, longer bins: 20 and 10). Coarsening bins did not rescue hits2 into a cloth backbone; it remained a motif detector. The calibration run (hits1, x10, bins=20) retained extremely stable metric-level behaviour at high \(n\).
+\end{enumerate}
+
+\subsection{Interpretation: channel activity versus cloth}
+The experiments support a clear hierarchy:
+\begin{itemize}
+\item Edge concurrency captures short-run \emph{channel activity} (tailgating / co-selection) and is not, by itself, a stable cloth backbone at current sampling scales.
+\item Strict cross-bin repetition (hits2) behaves as a \emph{motif detector} selecting seed-specific recurrent pockets.
+\item A connected cloth baseline (hits1) yields a stable \emph{geometry diagnostic} even when microstructure varies.
+\end{itemize}
+Thus, the failure mode is not ``insufficient binning''; it is that strict persistence at the current scale selects microscopic loops rather than the sought cloth background.
+
+\subsection{Pivot decision: coarse-grained cloth via communities and a super-graph}
+Given the above, Stage--2 pivots from ``edge identity as cloth'' to ``coarse-grained cloth'':
+\begin{itemize}
+\item Define the base cloth object as the connected hits1 used-by-core cloth core.
+\item Apply community detection on its undirected projection to obtain stable mesoscopic structure.
+\item Build a directed community super-graph (communities as nodes; inter-community flows as edges) and test stability at that level (NMI/ARI for partitions; super-graph stability; super-graph ball growth).
+\end{itemize}
+The pivot reframes the objective: rather than forcing edge-level stability prematurely, seek stability in a coarse-grained geometry object that may be the natural ``cloth'' analogue of a macroscopic bed-sheet built from microscopic yarn.
+
+\subsection{Reproducibility pointers (local artefacts)}
+At the time of this decision:
+\begin{itemize}
+\item Raw run folders (bring-up and ensembles) are retained under \path{outputs_cloth/}.
+\item Summary tables (Jaccard survival and metric-distance results, including the bin-coarsening comparison table) are consolidated under a local \path{csv/} folder.
+\item The pivot forward plan is recorded as \path{BCQM_pivot_forward_plan_v0.2.x.tex}.
+\end{itemize}
+
+\paragraph{Gate mapping (pivot plan).}
+In the Gate 0--4 scheme of the pivot plan, Gate 0 (hits1 cloth baseline) is established by the connected hits1 ensembles and their metric-stability results. The next two paragraphs summarise the evidence for Gates 1--3 (community partition stability, super-graph edge stability, and super-graph geometry/ball-growth stability); Gate 4 concerns subsequent ``physics proxy'' tests and is not addressed here.
+
+\paragraph{Stage--2 pivot evidence: community and super-graph stability.}
+We tested the pivot hypothesis that a stable ``cloth'' geometry emerges more naturally at a coarse-grained level than at exact edge identity by applying Louvain community detection to the undirected projection of the hits1 used-by-core cloth (x10 epoch, bins=20, 5 seeds per quadrant). Partition similarity across seeds is strong (NMI \(\approx 0.83\)–\(0.84\)) with moderate-to-strong ARI (\(\approx 0.54\)–\(0.64\)), indicating that community structure is reproducible even when micro-edge identity is not.
+
+Using the same partitions, we built a directed community super-graph in which nodes are communities and weighted edges represent aggregate inter-community flows. Geometry diagnostics on the super-graph (ball-growth fraction curves) remain stable across seeds: for instance, at \((N=8,n=0.4)\) the pairwise L2 distance between normalised super-graph ball-growth curves is \(d_{\mathrm{L2}}=0.0085\pm0.0053\), while at \((N=4,n=0.8)\) it is \(0.0170\pm0.0139\). At high cross-link pressure (\(n=0.8\)), the community count is also consistent across seeds (\(K\approx 22\)–\(23\) for both \(N=4\) and \(N=8\)), and the super-graph remains connected with a similar component size. A consolidated summary table is provided in \path{csv/community_supergraph_stability_summary.csv}.
+
+\paragraph{Stage--2 pivot evidence: super-graph edge stability (Gate 2).}
+Using the Louvain partitions from the hits1 cloth baseline (x10 epoch, bins=20, 5 seeds per quadrant), we constructed a directed community super-graph (communities as nodes; weighted inter-community flows as edges). Pairwise stability across seeds shows that coarse-graining substantially improves structural reproducibility: the unweighted super-graph edge-set Jaccard is \(0.60\pm0.10\) for \((N=4,n=0.4)\), \(0.53\pm0.10\) for \((N=4,n=0.8)\), \(0.42\pm0.05\) for \((N=8,n=0.4)\), and \(0.37\pm0.06\) for \((N=8,n=0.8)\).
+In addition, the relative strengths of inter-community flows are consistent: the Pearson correlation of crossing-edge weights on the common super-edges is \(0.66\pm0.10\) for \((N=4,n=0.4)\), \(0.91\pm0.02\) for \((N=4,n=0.8)\), \(0.74\pm0.03\) for \((N=8,n=0.4)\), and \(0.89\pm0.03\) for \((N=8,n=0.8)\).
+These results are recorded in \path{csv/supergraph_edge_stability.csv} and summarised alongside Gates 1 and 3 in \path{csv/pivot_gates_1_2_3_summary.csv}.
+
+\paragraph{Gate 3 tightening: Louvain resolution sweep.}
+To check that the community/super-graph conclusions are not an artefact of a single partition setting, we repeated the Gate 1--3 analysis across a Louvain resolution sweep (\(\gamma\in\{0.5,1.0,1.5,2.0\}\)) on the same hits1 baseline ensemble (x10 epoch, bins=20). For \(\gamma\ge 1.0\), partition similarity remains strong (NMI \(\approx 0.82\)–\(0.85\), ARI moderate-to-strong) and super-graph geometry stability remains in-family (super-graph ball-growth distances \(d_{\mathrm{L2}}\) remain small). The low-resolution case \(\gamma=0.5\) is an outlier with markedly poorer super-graph metric stability (notably at \((N=8,n=0.8)\)). These results are recorded in \path{csv/louvain_resolution_sweep_summary.csv} and support the claim that Gate 3 is robust to benign community-resolution choices.
+
+\paragraph{Gate 4 probe: thread localisation on the community super-graph.}
+Using the traced runs (hits1, x10, bins=20; \(N=8\), \(n=0.8\), 5 seeds), we mapped each thread's end-of-bin event ID to a Louvain community label and measured inter-bin motion on the corresponding community super-graph. All runs produced a connected super-graph with \(K\approx 21\)–23 communities. The hop-distance distribution between consecutive bins is strongly local: averaged across seeds, \(\mathrm{P}(d=0)\approx 0.068\), \(\mathrm{P}(d=1)\approx 0.747\), \(\mathrm{P}(d=2)\approx 0.184\), and no transitions with \(d\ge 3\) were observed. The mean hop distance is \(\langle d\rangle\approx 1.116\) and the per-bin community-change rate is high in this regime (mean jump-rate \(\approx 0.932\)), indicating frequent movement but typically only to neighbouring communities rather than long-range teleports. This supports the interpretation that threads respect the emergent cloth neighbourhood structure at the super-graph level.
+
+\paragraph{Gate 4 (physics proxy): thread localisation on the community super-graph.}
+To move beyond ``stability of objects'' and test whether threads \emph{respect} the emergent coarse geometry, we added minimal Stage--2 logging (\path{cloth_trace}) that records, at each logged bin boundary, (i) each thread's end-of-bin event ID and (ii) a core-membership mask. Using Louvain partitions on the hits1 cloth baseline and the corresponding community super-graph, we mapped each thread's end-of-bin event to a community label and measured the shortest-path hop distance on the super-graph between consecutive bins.
+
+In the high-coherence regime (\(n=0.8\), hits1, x10 epoch, bins=20; \(N\in\{4,8\}\)), inter-bin motion is strongly local: all transitions lie in \(d\in\{0,1,2\}\) with no long-range hops (\(d\ge 3\)), and the distribution is dominated by \(d=1\). In the lower-coherence regime (\(n=0.4\)), using an ``all-used'' partition/super-graph construction restores full mapping coverage and again yields local motion (0--2 hops only), with a modest shift of probability mass from \(d=1\) to \(d=2\) relative to \(n=0.8\). Tagged Gate--4 outputs are stored under \path{csv/gate4/} (e.g.\ \path{gate4_n0p8_all_all_*} and \path{gate4_n0p4_all_all_*}) and can be regenerated using the repo analysis script \path{bcqm_vii_cloth/analysis/gate4_thread_localisation.py}.
+
+\end{document}

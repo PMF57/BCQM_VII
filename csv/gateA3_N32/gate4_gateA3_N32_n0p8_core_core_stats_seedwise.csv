@@ -1,0 +1,6 @@
+N,n,seed,bins_logged,threads,partition_source,supergraph_source,K,super_nodes,super_edges,transitions_total,transitions_mapped,coverage,missing_labels,inf_hops
+32,0.8,56791,20,32,core,core,69,69,70,608,54,0.08881578947368421,554,0
+32,0.8,56792,20,32,core,core,68,66,66,608,51,0.08388157894736842,557,0
+32,0.8,56793,20,32,core,core,64,63,63,608,58,0.09539473684210527,549,1
+32,0.8,56794,20,32,core,core,71,71,70,608,42,0.06907894736842106,566,0
+32,0.8,56795,20,32,core,core,69,69,69,608,48,0.07894736842105263,560,0

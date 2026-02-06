@@ -1,0 +1,72 @@
+schema_version: vi_spacetime_config_v0.1
+experiment_id: gateA3_N32_hits1_x10_bins20_n0p8
+description: 'A3 stress test extension: N=32 only, n=0.8 only; hits1 cloth, x10 epoch, bins=20;
+  trace on for Gate-4 localisation; 5 seeds.'
+variant: full
+engine:
+  mode: v_glue
+sizes:
+- 32
+seeds:
+  count: 5
+  start: 56791
+scan:
+  n_values:
+  - 0.8
+steps_total: 20000
+burn_in_epochs: 5000
+measure_epochs: 15000
+W_coh: 100
+active_window:
+  hops: 100
+  mode: recency
+glue:
+  axes:
+    cadence_disorder:
+      max: 1.0
+      min: 1.0
+    domains:
+      max: 0.0
+      min: 0.0
+    phase_lock:
+      max: 0.0
+      min: 0.0
+    shared_bias:
+      max: 0.0
+      min: 0.0
+  mapping_mode: linear
+  profile: composite_all
+  profile_axes:
+  - phase_lock
+  - cadence_disorder
+space:
+  allow_cocreate_merge: false
+  beta_junc: 1.5
+  domain_match: true
+  enabled: true
+  log_island_timeseries: false
+  p_reuse_mode: from_n
+  w_star: 0.3
+crosslinks:
+  allow_junctions: true
+  new_event_policy: unique_per_thread
+observables:
+  beta_junc: 1.5
+snapshots:
+  enabled: false
+cloth:
+  bins: 20
+  enabled: true
+  include_ledger: true
+  min_bin_hits: 1
+  min_concurrency: 2
+  w_lock: 0.1
+  trace_threads: true
+  trace_stride: 1
+output:
+  out_dir: outputs_cloth/gateA3_N32_hits1_x10_bins20_n0p8
+  timeseries_bins: 20
+  write_timeseries: false
+provenance:
+  notes: Stage-2 cloth extraction uses bin concurrency (events+edges) with lockstep-supported
+    core and persistent bin-hit criterion.

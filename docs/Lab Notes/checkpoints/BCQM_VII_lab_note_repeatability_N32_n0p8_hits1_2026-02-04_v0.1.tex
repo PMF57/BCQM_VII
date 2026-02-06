@@ -1,0 +1,129 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\setlist{nosep}
+\usepackage{graphicx}
+\graphicspath{{figures/}{./}}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+
+\title{BCQM VII Lab Note\\Repeatability check: two consecutive N=32 cloth runs (v0.1)}
+\author{Peter M.~Ferguson \\ \textit{Independent Researcher}}
+\date{4 February 2026}
+
+\begin{document}
+\maketitle
+
+\section*{Purpose}
+Assess whether stochasticity in the thread dynamics produces materially different \emph{mesoscopic} Stage--2 outcomes when the \emph{same} configuration is executed twice with different RNG seed ranges. Concretely, we test repeatability of:
+(i) core/halo split (\(\Phi\)),
+(ii) clock quality (\(Q_{\mathrm{clock}}\)),
+(iii) cloth health and size summaries, and
+(iv) Gate--4 localisation (hop-distance distribution on the community cloth).
+
+\section*{Configuration (fixed across both runs)}
+Headline case (Stage--2 stress-test regime):
+\begin{itemize}
+  \item Ensemble size: \(N=32\) (only), glue regime: \(n=0.8\) (high coherence).
+  \item Coherence horizon: \(W_{\mathrm{coh}}=100\).
+  \item Cloth extraction: hits1 (\texttt{min\_bin\_hits}=1), bins=20, x10 epoch (burn-in 5000 epochs; measurement 15000 epochs; total steps 20000).
+  \item Logging: \texttt{trace\_threads=true} (stride 1), \texttt{include\_ledger=true} to support Gate--4 hop localisation.
+\end{itemize}
+
+Two independent runs were performed:
+\begin{itemize}
+  \item \textbf{repA}: \texttt{gateA3\_N32\_hits1\_x10\_bins20\_n0p8\_repA.yml}, seeds.start=56791, seeds.count=5, output dir \texttt{outputs\_cloth/gateA3\_N32\_hits1\_x10\_bins20\_n0p8\_repA}.
+  \item \textbf{repB}: \texttt{gateA3\_N32\_hits1\_x10\_bins20\_n0p8\_repB.yml}, seeds.start=66791, seeds.count=5, output dir \texttt{outputs\_cloth/gateA3\_N32\_hits1\_x10\_bins20\_n0p8\_repB}.
+\end{itemize}
+
+\section*{Procedure}
+From the repository root:
+\begin{enumerate}
+  \item Execute two scans (repA and repB) with identical parameters except for the seed range and output directory.
+  \item Summarise run-level metrics to CSV:
+  \texttt{bcqm\_vii\_cloth/analysis/summarise\_runs.py} \(\rightarrow\) \texttt{csv/repeatability/repA\_run\_summary.csv} and \texttt{csv/repeatability/repB\_run\_summary.csv}.
+  \item Run Gate--4 hop localisation on each run:
+  \texttt{bcqm\_vii\_cloth/analysis/gate4\_thread\_localisation.py} (all/all partition and super-graph; resolution 1.0) \(\rightarrow\) \texttt{gate4\_repA\_hopdist\_seedwise.csv} and \texttt{gate4\_repB\_hopdist\_seedwise.csv}.
+  \item Compare repA and repB using \texttt{repeatability\_compare.py} \(\rightarrow\) \texttt{repeatability\_compare\_table.csv} and \texttt{fig\_repeatability\_repA\_vs\_repB.pdf}.
+\end{enumerate}
+
+\section*{Outputs}
+\begin{itemize}
+  \item \texttt{repeatability\_compare\_table.csv} (summary table of mean \(\pm\) sd across the 5 seeds in each run).
+  \item \texttt{fig\_repeatability\_repA\_vs\_repB.pdf} (visual comparison of headline metrics).
+\end{itemize}
+
+\section*{Results}
+\subsection*{Run-level stability (cloth and clock)}
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}p{0.40\linewidth}p{0.22\linewidth}p{0.22\linewidth}p{0.12\linewidth}@{}}
+\toprule
+Metric & repA (mean $\pm$ sd) & repB (mean $\pm$ sd) & $|\Delta|$ \\
+\midrule
+Core fraction Φ & 0.1820 $\pm$ 0.0125 & 0.1845 $\pm$ 0.0090 & 0.002 \\
+Clock quality Q_clock & 6.200 $\pm$ 0.144 & 6.229 $\pm$ 0.134 & 0.029 \\
+Core events & 16,783 $\pm$ 1,169 & 17,035 $\pm$ 838 & 252 \\
+Halo events & 75,408 $\pm$ 1,083 & 75,303 $\pm$ 791 & 105 \\
+Core edges & 18,750 $\pm$ 1,500 & 19,049 $\pm$ 1,137 & 299 \\
+Halo edges & 436,371 $\pm$ 1,496 & 436,067 $\pm$ 1,134 & 303 \\
+Ball component size & 16,783 $\pm$ 1,168 & 17,034 $\pm$ 838 & 252 \\
+\bottomrule
+\end{tabular}
+\caption{Repeatability summary (run-level metrics) for two independent seed ranges at N=32, n=0.8 (hits1).}
+\label{tab:repeat_run}
+\end{table}
+
+Interpretation:
+\begin{itemize}
+  \item The key Stage--2 scalars are stable across the two independent runs: \(\Phi\) differs by \(\approx 0.0024\), and \(Q_{\mathrm{clock}}\) differs by \(\approx 0.029\), both far below their respective seed-to-seed scatter within each run.
+  \item Core/halo event and edge counts shift slightly between repA and repB but remain within the run-to-run variability; no qualitative change in the core+halo regime is observed.
+\end{itemize}
+
+\subsection*{Gate--4 locality (hop distances on the community cloth)}
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}p{0.40\linewidth}p{0.22\linewidth}p{0.22\linewidth}p{0.12\linewidth}@{}}
+\toprule
+Metric & repA (mean $\pm$ sd) & repB (mean $\pm$ sd) & $|\Delta|$ \\
+\midrule
+Hop fraction d=0 & 0.406 $\pm$ 0.189 & 0.521 $\pm$ 0.192 & 0.115 \\
+Hop fraction d=1 & 0.535 $\pm$ 0.163 & 0.440 $\pm$ 0.148 & 0.094 \\
+Hop fraction d=2 & 0.059 $\pm$ 0.039 & 0.038 $\pm$ 0.056 & 0.020 \\
+Hop fraction d≥3 & 0.000 $\pm$ 0.000 & 0.000 $\pm$ 0.000 & 0.000 \\
+Mean hop distance & 0.653 $\pm$ 0.219 & 0.517 $\pm$ 0.241 & 0.135 \\
+Mean hop distance | change & 1.090 $\pm$ 0.053 & 1.058 $\pm$ 0.084 & 0.033 \\
+\bottomrule
+\end{tabular}
+\caption{Repeatability summary (Gate-4 hop/localisation metrics) on the undirected community cloth (all/all partition and super-graph).}
+\label{tab:repeat_hops}
+\end{table}
+
+Interpretation:
+\begin{itemize}
+  \item Locality is robust: the hop distribution is strictly confined to \(d\in\{0,1,2\}\) in both runs (no \(d\ge 3\) events).
+  \item The mixture between \(d=0\) and \(d=1\) varies between the two runs at the present sample size, while maintaining strong locality. This suggests that Stage--2 wording should prefer ``dominated by \(d\in\{0,1\}\)'' rather than ``dominated by \(d=1\)'' unless further averaging (more seeds or longer logging) is performed.
+\end{itemize}
+
+\subsection*{Figure}
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.92\linewidth]{fig_repeatability_repA_vs_repB.pdf}
+  \caption{Repeatability check: repA versus repB for headline metrics at N=32, n=0.8 (hits1).}
+  \label{fig:repeatability}
+\end{figure}
+
+\section*{Conclusion}
+Two independent executions of the headline Stage--2 configuration (N=32, n=0.8, hits1) yield materially consistent mesoscopic outputs. The core/halo fraction \(\Phi\) and clock quality \(Q_{\mathrm{clock}}\) are repeatable across seed ranges, supporting the Stage--2 claim that the coarse cloth object and clock signal are robust to microscopic stochasticity. Gate--4 results confirm strict locality on the community cloth (\(d\ge 3\) absent), with some variability in the d=0 versus d=1 mixture at the present sample size.
+
+\end{document}

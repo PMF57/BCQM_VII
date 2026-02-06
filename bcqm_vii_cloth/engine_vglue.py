@@ -36,6 +36,7 @@ from .glue_dynamics import (
 )
 from .metrics import compute_lockstep_metrics
 from .event_graph import EventGraph
+# PROVENANCE: BCQM_VII stage2 cloth (bin-based); store_lists v0.3.1 + cloth_trace v0.4; 2026-02-02
 
 
 _DEFAULT_HOP = {"form": "power_law", "alpha": 1.0, "k_prefactor": 2.0, "memory_depth": 1}
@@ -313,6 +314,127 @@ def _bundles_from_histories(hist: List[List[int]], w_star: float) -> Dict[str, A
     return {"F_max": fmax, "bundle_sizes": sizes, "bundle_hist": histo}
 
 
+def _largest_bundle_members(hist: List[List[int]], w_star: float) -> List[int]:
+    """Return indices of the largest overlap-bundle component at threshold w_star."""
+    N = len(hist)
+    if N == 0:
+        return []
+    sets = [set(h) for h in hist]
+    adj = {i: set() for i in range(N)}
+    for i in range(N):
+        for j in range(i + 1, N):
+            w = _overlap_w(sets[i], sets[j])
+            if w > w_star:
+                adj[i].add(j)
+                adj[j].add(i)
+    seen: Set[int] = set()
+    best: List[int] = []
+    for i in range(N):
+        if i in seen:
+            continue
+        stack = [i]
+        comp = []
+        seen.add(i)
+        while stack:
+            x = stack.pop()
+            comp.append(x)
+            for nb in adj[x]:
+                if nb not in seen:
+                    seen.add(nb)
+                    stack.append(nb)
+        if len(comp) > len(best):
+            best = comp
+    best.sort()
+    return best
+
+
+def _cloth_cfg(cfg: Dict[str, Any], steps_total: int, burn_in: int) -> Dict[str, Any]:
+    """Resolve cloth logging/extraction config (bin-based, Stage-2)."""
+    c = cfg.get("cloth", {}) or {}
+    enabled = bool(c.get("enabled", False))
+    out = cfg.get("output", {}) or {}
+    bins = int(c.get("bins", out.get("timeseries_bins", 80)))
+    bins = max(10, min(2000, bins))
+    T_eff = max(1, steps_total - burn_in)
+    interval = max(1, T_eff // bins)
+    w_lock = float(c.get("w_lock", 0.10))
+    min_concurrency = int(c.get("min_concurrency", 2))
+    min_bin_hits = int(c.get("min_bin_hits", 3))
+    include_ledger = bool(c.get("include_ledger", True))
+    return {
+        "enabled": enabled,
+        "bins": bins,
+        "interval": interval,
+        "w_lock": w_lock,
+        "min_concurrency": min_concurrency,
+        "min_bin_hits": min_bin_hits,
+        "include_ledger": include_ledger,
+        "trace_threads": bool(c.get("trace_threads", False)),
+        "trace_stride": int(c.get("trace_stride", 1)),
+    }
+
+
+def _ball_growth_from_edges(nodes: Set[int], edges: Set[tuple], r_max: int = 30, samples: int = 40, seed: int = 0) -> Dict[str, Any]:
+    """Ball growth on an undirected graph defined by (nodes, edges)."""
+    import random
+    rng = random.Random(int(seed))
+    if not nodes:
+        return {"comp_size": 0, "r_max": int(r_max), "samples": 0, "mean_ball": []}
+    adj = {u: set() for u in nodes}
+    for (u, v) in edges:
+        if u in adj and v in adj:
+            adj[u].add(v)
+            adj[v].add(u)
+    # largest component
+    best = set()
+    seen = set()
+    for u in nodes:
+        if u in seen:
+            continue
+        stack = [u]
+        comp = set([u])
+        seen.add(u)
+        while stack:
+            x = stack.pop()
+            for nb in adj.get(x, ()):
+                if nb not in seen:
+                    seen.add(nb)
+                    comp.add(nb)
+                    stack.append(nb)
+        if len(comp) > len(best):
+            best = comp
+    comp_size = len(best)
+    if comp_size == 0:
+        return {"comp_size": 0, "r_max": int(r_max), "samples": 0, "mean_ball": []}
+    nodes_list = list(best)
+    k = min(int(samples), len(nodes_list))
+    roots = [nodes_list[rng.randrange(len(nodes_list))] for _ in range(k)]
+    mean_ball = [0.0] * (int(r_max) + 1)
+    for root in roots:
+        dist = {root: 0}
+        frontier = [root]
+        while frontier:
+            x = frontier.pop()
+            dx = dist[x]
+            if dx >= r_max:
+                continue
+            for nb in adj.get(x, ()):
+                if nb not in dist:
+                    dist[nb] = dx + 1
+                    if dist[nb] <= r_max:
+                        frontier.append(nb)
+        counts = [0] * (int(r_max) + 1)
+        for d in dist.values():
+            if d <= r_max:
+                counts[d] += 1
+        cum = 0
+        for r in range(r_max + 1):
+            cum += counts[r]
+            mean_ball[r] += cum
+    mean_ball = [x / float(k) for x in mean_ball]
+    return {"comp_size": int(comp_size), "r_max": int(r_max), "samples": int(k), "mean_ball": mean_ball}
+
+
 def _ts_config(cfg: Dict[str, Any], steps_total: int, burn_in: int) -> Dict[str, Any]:
     """
     Time-series logging config.
@@ -391,6 +513,35 @@ def run_single_v_glue(cfg: Dict[str, Any], N: int, n: float, seed: int) -> None:
             "interval": int(ts_cfg["interval"]),
             "records": [],  # list of per-sample dicts
         })
+
+    # Cloth logging / extraction (Stage-2): concurrency per bin + lockstep-supported core.
+    cloth_cfg = _cloth_cfg(cfg, steps_total, burn_in)
+    cloth = {"enabled": bool(cloth_cfg["enabled"])}
+    cloth_ledger: List[Dict[str, Any]] = []
+    cloth_trace: Dict[str, Any] = {"enabled": bool(cloth_cfg.get("trace_threads", False))}
+    if cloth_trace["enabled"]:
+        cloth_trace["bins"] = int(cloth_cfg["bins"])
+        cloth_trace["stride"] = max(1, int(cloth_cfg.get("trace_stride", 1)))
+        cloth_trace["event_at_end"] = []  # list of [event_id per thread] per logged bin
+        cloth_trace["core_mask"] = []     # list of [0/1 per thread] per logged bin
+    # Stage-2 cloth: per-bin presence hits (no concurrency filter) for edges/events used by all threads and by core members.
+    # These are derived counters (not stored on primitives) and support persistence filters at end-of-run.
+    edge_bin_hits_all_used: Dict[tuple, int] = {}
+    edge_bin_hits_core_used: Dict[tuple, int] = {}
+    event_bin_hits_all_used: Dict[int, int] = {}
+    event_bin_hits_core_used: Dict[int, int] = {}
+
+    if cloth_cfg["enabled"]:
+        cloth.update({
+            "interval": int(cloth_cfg["interval"]),
+            "w_lock": float(cloth_cfg["w_lock"]),
+            "min_concurrency": int(cloth_cfg["min_concurrency"]),
+            "min_bin_hits": int(cloth_cfg["min_bin_hits"]),
+        })
+        # per-bin per-thread ledgers (reset each bin)
+        bin_thread_edges = [dict() for _ in range(N)]   # (u,v) -> count
+        bin_thread_events = [dict() for _ in range(N)]  # e -> count
+        bin_index = 0
     if space["enabled"]:
         # one initial event per thread
         frontiers = [g.new_event(0, domain=int(threads.domain[i])) for i in range(N)]  # type: ignore
@@ -462,11 +613,72 @@ def run_single_v_glue(cfg: Dict[str, Any], N: int, n: float, seed: int) -> None:
                         else:
                             next_events[i] = dom_to_new[dom]
 
+
+            # Cloth bin ledger: record selected events and traversed edges per thread (before updating frontiers).
+            if cloth_cfg["enabled"] and (t >= burn_in):
+                for i in range(N):
+                    e = next_events[i]
+                    u = frontiers[i]
+                    v = e
+                    bin_thread_events[i][e] = bin_thread_events[i].get(e, 0) + 1
+                    key = (int(u), int(v))
+                    bin_thread_edges[i][key] = bin_thread_edges[i].get(key, 0) + 1
             # Commit edges and update frontiers/histories
             for i in range(N):
                 g.add_edge(frontiers[i], next_events[i], t + 1)
             frontiers = next_events
             _histories_push(histories, W_coh, frontiers)
+
+            # Cloth bin finalisation: at bin boundaries, compute concurrency (all vs core bundle) and store compact ledger.
+            if cloth_cfg["enabled"] and (t >= burn_in) and ((t - burn_in) % cloth_cfg["interval"] == 0):
+                core_members = set(_largest_bundle_members(histories, float(cloth_cfg["w_lock"])))
+                ev_all: Dict[int, int] = {}
+                ev_core: Dict[int, int] = {}
+                ed_all: Dict[tuple, int] = {}
+                ed_core: Dict[tuple, int] = {}
+                for i in range(N):
+                    for e, c in bin_thread_events[i].items():
+                        ev_all[int(e)] = ev_all.get(int(e), 0) + int(c)
+                        if i in core_members:
+                            ev_core[int(e)] = ev_core.get(int(e), 0) + int(c)
+                    for (u,v), c in bin_thread_edges[i].items():
+                        ed_all[(int(u), int(v))] = ed_all.get((int(u), int(v)), 0) + int(c)
+                        if i in core_members:
+                            ed_core[(int(u), int(v))] = ed_core.get((int(u), int(v)), 0) + int(c)
+                minc = int(cloth_cfg["min_concurrency"])
+                events_all = [[int(e), int(c)] for e,c in ev_all.items() if int(c) >= minc]
+                events_core = [[int(e), int(c)] for e,c in ev_core.items() if int(c) >= minc]
+                edges_all = [[int(u), int(v), int(c)] for (u,v),c in ed_all.items() if int(c) >= minc]
+                edges_core = [[int(u), int(v), int(c)] for (u,v),c in ed_core.items() if int(c) >= minc]
+
+                # Update per-bin presence hits (used edges/events) without concurrency threshold.
+                # Presence is counted once per bin if an item was used at least once in that bin.
+                for e, c in ev_all.items():
+                    event_bin_hits_all_used[int(e)] = event_bin_hits_all_used.get(int(e), 0) + 1
+                for e, c in ev_core.items():
+                    event_bin_hits_core_used[int(e)] = event_bin_hits_core_used.get(int(e), 0) + 1
+                for (u, v), c in ed_all.items():
+                    edge_bin_hits_all_used[(int(u), int(v))] = edge_bin_hits_all_used.get((int(u), int(v)), 0) + 1
+                for (u, v), c in ed_core.items():
+                    edge_bin_hits_core_used[(int(u), int(v))] = edge_bin_hits_core_used.get((int(u), int(v)), 0) + 1
+                if bool(cloth_cfg.get("include_ledger", True)):
+                    cloth_ledger.append({
+                        "bin": int(bin_index),
+                        "t_end": int(t),
+                        "core_size": int(len(core_members)),
+                        "events_all": events_all,
+                        "events_core": events_core,
+                        "edges_all": edges_all,
+                        "edges_core": edges_core,
+                    })
+                if cloth_trace.get("enabled", False):
+                    if (bin_index % int(cloth_trace.get("stride", 1))) == 0:
+                        cloth_trace["event_at_end"].append([int(frontiers[i]) for i in range(N)])
+                        cloth_trace["core_mask"].append([1 if i in core_members else 0 for i in range(N)])
+                for i in range(N):
+                    bin_thread_events[i].clear()
+                    bin_thread_edges[i].clear()
+                bin_index += 1
 
             # Optional binned time series record
             if ts_cfg["enabled"] and (t >= burn_in) and ((t - burn_in) % ts_cfg["interval"] == 0):
@@ -487,6 +699,7 @@ def run_single_v_glue(cfg: Dict[str, Any], N: int, n: float, seed: int) -> None:
                     "S_junc_w": float(s_junc_t),
                     "F_max_by_wstar": f_by_w,
                 })
+
 
             if space["log_island_timeseries"] and (t >= burn_in) and (t % max(1, W_coh // 4) == 0):
                 b = _bundles_from_histories(histories, space["w_star"])
@@ -605,6 +818,52 @@ def run_single_v_glue(cfg: Dict[str, Any], N: int, n: float, seed: int) -> None:
         max_indeg = 0
         clust = None
         islands_out = {"enabled": False}
+    # Cloth summary (end-of-run): persistent hits across bins.
+    # We define a Stage-2 "used" cloth core from edges/events used by core members (presence per bin, no concurrency filter),
+    # and retain concurrent-only ledgers as a reinforcement diagnostic.
+    if cloth_cfg["enabled"]:
+        min_hits = int(cloth_cfg["min_bin_hits"])
+        # Core/halo based on per-bin usage (presence) accumulated during the run.
+        core_edges = {k for k,v in edge_bin_hits_core_used.items() if int(v) >= min_hits}
+        core_events = {k for k,v in event_bin_hits_core_used.items() if int(v) >= min_hits}
+        halo_edges = {k for k,v in edge_bin_hits_all_used.items() if int(v) >= min_hits and k not in core_edges}
+        halo_events = {k for k,v in event_bin_hits_all_used.items() if int(v) >= min_hits and k not in core_events}
+
+        # Ball growth on the core (edge-based) cloth.
+        bg = _ball_growth_from_edges(core_events if core_events else set(), core_edges, r_max=30, samples=40, seed=int(seed)+999)
+
+        # Diagnostic: persistent concurrent hits (min_concurrency-filtered) for comparison.
+        edge_hits_conc_core: Dict[tuple, int] = {}
+        event_hits_conc_core: Dict[int, int] = {}
+        for rec in cloth_ledger:
+            for u,v,c in rec.get("edges_core", []):
+                edge_hits_conc_core[(int(u), int(v))] = edge_hits_conc_core.get((int(u), int(v)), 0) + 1
+            for e,c in rec.get("events_core", []):
+                event_hits_conc_core[int(e)] = event_hits_conc_core.get(int(e), 0) + 1
+        core_edges_concurrent = {k for k,v in edge_hits_conc_core.items() if int(v) >= min_hits}
+        core_events_concurrent = {k for k,v in event_hits_conc_core.items() if int(v) >= min_hits}
+
+        cloth.update({
+            "core_edges_count": int(len(core_edges)),
+            "core_events_count": int(len(core_events)),
+            "halo_edges_count": int(len(halo_edges)),
+            "halo_events_count": int(len(halo_events)),
+            # Explicit core/halo lists for survival analysis (Jaccard across seeds).
+            # Toggle with cloth.store_lists (default: true).
+            "store_lists": bool(cloth_cfg.get("store_lists", True)),
+            "core_edges_used": sorted([[int(u), int(v)] for (u, v) in core_edges]) if bool(cloth_cfg.get("store_lists", True)) else None,
+            "halo_edges_used": sorted([[int(u), int(v)] for (u, v) in halo_edges]) if bool(cloth_cfg.get("store_lists", True)) else None,
+            "core_events_used": sorted([int(e) for e in core_events]) if bool(cloth_cfg.get("store_lists", True)) else None,
+            "halo_events_used": sorted([int(e) for e in halo_events]) if bool(cloth_cfg.get("store_lists", True)) else None,
+            "core_edges_concurrent_count": int(len(core_edges_concurrent)),
+            "core_events_concurrent_count": int(len(core_events_concurrent)),
+            "ball_growth": bg,
+            "ledger_bins": int(len(cloth_ledger)) if bool(cloth_cfg.get("include_ledger", True)) else None,
+        })
+    else:
+        cloth_ledger = []
+
+
 
     metrics_obj: Dict[str, Any] = {
         "run_id": run_id,
@@ -625,6 +884,9 @@ def run_single_v_glue(cfg: Dict[str, Any], N: int, n: float, seed: int) -> None:
         "geometry": geometry_out,
         "islands": islands_out,
         "timeseries": ts,
+        "cloth": cloth,
+        "cloth_trace": cloth_trace if bool(cloth_trace.get("enabled", False)) else None,
+        "cloth_ledger": cloth_ledger,
         "S_perc": float(S_perc),
         "S_junc_w": float(S_junc_w),
         "hubshare": float(hub),

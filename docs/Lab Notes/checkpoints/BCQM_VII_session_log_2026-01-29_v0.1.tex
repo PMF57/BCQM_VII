@@ -1,0 +1,95 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{enumitem}
+\setlist{nosep}
+
+\title{BCQM VII Session Log\\Stage--2 Cloth Bring-up and Provenance Verification (v0.1)}
+\author{Peter M.~Ferguson \\ \textit{Independent Researcher}}
+\date{29 January 2026}
+
+\begin{document}
+\emergencystretch=2em
+\sloppy
+\maketitle
+
+\section*{Timestamp}
+Session start reference: \textbf{Thursday 29/01/26 10:56} (Europe/London).
+
+\section*{Purpose}
+Record Stage--2 bring-up actions in the new BCQM VII repo: (i) provenance verification against the Zenodo-extracted BCQM VI code; (ii) Stage--2 cloth objective selection and initial implementation strategy (bin-based concurrency); (iii) first cloth bring-up run(s) and diagnostics; (iv) refinement from ``concurrent edges'' to ``edges used by the lockstep core''; and (v) the immediate next steps proposed for tomorrow.
+
+\section*{1. Provenance verification (BCQM VI $\rightarrow$ BCQM VII)}
+Two folders were prepared locally:
+\begin{itemize}
+\item \texttt{bcqm\_vi\_spacetime}: extracted from the Zenodo archive of the BCQM VI reference implementation (release DOI 10.5281/zenodo.18403109).
+\item \texttt{bcqm\_vii\_cloth}: the trimmed Stage--2 working copy prepared for BCQM VII.
+\end{itemize}
+
+A ``just-run'' SHA256 comparison script (\texttt{prove\_vi\_lineage.sh}) was executed on a fixed list of 14 core files (CLI, runner, v\_glue engine, event graph, schema, pipelines, and key analysis scripts). The result was:
+\begin{itemize}
+\item MATCH: 14
+\item DIFF: 0
+\item MISS\_VI: 0
+\item MISS\_VII: 0
+\end{itemize}
+This constitutes a cryptographic, file-by-file proof that the tested BCQM VII core runtime and pipeline files are byte-identical to the Zenodo-extracted BCQM VI release. The proof artefacts (script + timestamped report) were placed under \texttt{docs/provenance/} and committed to the new GitHub repository \texttt{PMF57/BCQM\_VII} as the baseline state.
+
+\section*{2. Stage--2 objective and design choice}
+Stage--2 begins from the Stage--1 conclusion that geometry on the short active slice \(V_{\mathrm{active}}(t)\) is ``yarn-like'' (finite, fast mixing) and that a persistent ``cloth'' geometry object must be constructed for metric/dimension tests. The chosen direction was:
+\begin{itemize}
+\item persistence via (3) lockstep-bundle support and (4) survival-under-perturbation validation;
+\item minimalism-preserving persistence proxy via \emph{concurrency} without storing mutable weights on events/edges;
+\item \textbf{bin-based} (not tick-based) concurrency as the first implementation (``Stage--2a''), deferring sliding-window concurrency to a later robustness check.
+\end{itemize}
+
+\section*{3. Implementation bring-up (bin-based concurrency ledger)}
+A first Stage--2 patch introduced a \emph{cloth ledger} and \emph{cloth summary} in \texttt{RUN\_METRICS}. An initial SyntaxError in \texttt{engine\_vglue.py} (escaped docstring) was fixed (v0.1.1) and the bring-up run completed cleanly.
+
+\subsection*{3.1 Bring-up run: concurrent-only persistence (baseline behaviour)}
+Config: W=100, N=8, n=0.8, seed 56796; bins=80; \(w_{\mathrm{lock}}=0.10\); \texttt{min\_concurrency}=2.
+
+Two ``persistence'' thresholds were tested:
+\begin{itemize}
+\item \textbf{min\_bin\_hits=3} (original): core events were non-empty, but \emph{core edges were empty}; ball growth on the edge core was degenerate. Interpretation: concurrent edges (two threads traversing the same transition within a bin) are real but too rare to repeat across bins at this scale.
+\item \textbf{min\_bin\_hits=1}: core edges became non-empty but appeared as disjoint two-node components (pair links), yielding trivial ball growth. Interpretation: concurrent edges exist but are not yet a connected backbone.
+\end{itemize}
+
+These results established a key Stage--2 diagnostic lesson: \emph{edge concurrency alone is too sparse to define a connected cloth edge backbone} at the current run length/binning.
+
+\section*{4. Refinement: ``edges used by the lockstep core''}
+To obtain an edge-based cloth object without storing weights on primitives, a refinement was adopted:
+\begin{itemize}
+\item keep concurrent edges/events as a reinforcement diagnostic;
+\item additionally log \emph{per-bin presence} of edges/events used by (i) all threads and (ii) the lockstep core members (based on overlap membership at \(w_{\mathrm{lock}}\));
+\item define the persistent edge core from bin-hit counts of \emph{used-by-core} edges rather than from concurrent edges only.
+\end{itemize}
+
+A first implementation of this refinement contained an indentation error and was corrected (v0.2.1). The corrected patch was then executed using the same bring-up configs.
+
+\subsection*{4.1 Results under used-by-core persistence}
+Using the same physical regime (W=100, N=8, n=0.8, seed 56796):
+\begin{itemize}
+\item \textbf{min\_bin\_hits=2}: a non-zero persistent edge core appeared (dozens of edges), but the resulting edge-core component was still very small (ball-growth component size of only a few nodes), indicating that strict cross-bin repetition selects a tiny recurrent pocket at this scale.
+\item \textbf{min\_bin\_hits=1}: the used-by-core edge set formed a large connected component spanning the full core event set (non-degenerate ball growth), while the concurrent-edge diagnostic remained sparse. Interpretation: the used-by-core definition produces a meaningful ``roads'' cloth candidate, while concurrency remains useful as a reinforcement signal rather than the sole backbone criterion.
+\end{itemize}
+
+\section*{5. Immediate next steps proposed (for tomorrow)}
+The session concluded with two clear next actions:
+\begin{enumerate}[label=\arabic*.]
+\item \textbf{Ensemble stability for cloth:} repeat the used-by-core cloth extraction across a small seed set (e.g.\ 5 seeds) for N=8 at n=0.4 and n=0.8 (and then N=4), to assess the stability of cloth core size, ball-growth curves, and the concurrent-edge diagnostic.
+\item \textbf{Survival metrics:} implement a lightweight survival measure across seeds (e.g.\ Jaccard overlap) for the cloth core. This requires either storing an explicit core edge list (small for N$\leq$8) or storing a compact signature/hashing scheme to permit set comparison without bulky outputs. The preferred option will be chosen before coding.
+\end{enumerate}
+
+\end{document}

@@ -1,0 +1,175 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\setlist{nosep}
+
+\title{\textbf{BCQM VII Stage-2 (Geometry Cloth) Forward Plan}\\
+\large Pivot Programme: From molecular edges to a stable ``cloth'' via bin-coarsening and community structure}
+\author{Peter M.~Ferguson \\ \textit{Independent Researcher}}
+\date{30 January 2026}
+
+\begin{document}
+\maketitle
+\emergencystretch=2em
+\sloppy
+\section{Purpose of the pivot}
+Stage--2 aims to define a persistent ``cloth'' geometry object beyond the short, fast-mixing active slice \(V_{\mathrm{active}}(t)\). Stage--1 established that exact edge identity is seed-sensitive (molecular/foam scale), while geometry diagnostics (ball growth) can be comparatively stable. The pivot operationalises this by moving the geometry object one level up: from raw edge sets to coarse-grained structure (communities and a community super-graph).
+
+\subsection{Working diagnosis from Stage--2 experiments}
+In the current VII code, permissive persistence (hits1) yields a connected edge cloth and highly stable ball-growth curves at high cross-link pressure, while strict cross-bin repetition (hits2) isolates tiny recurrent motifs rather than a spanning backbone (even at longer epochs and bin coarsening). This indicates that ``cloth'' stability should be sought at an intermediate, coarse-grained scale: stable \emph{classes} of geometry may emerge before stable microstructure.
+
+\section{What must be fixed before proceeding}
+This plan assumes the following are already in place (and verified):
+\begin{itemize}
+\item Proven code provenance: BCQM VII baseline cryptographically matched to BCQM VI v0.1.0 core files.
+\item Stage--2 logging: \path{cloth} and \path{cloth_ledger} in \path{RUN_METRICS_*}. Explicit \path{core_edges_used} and \path{core_events_used} lists are recorded for survival.
+\item Consolidation: ensemble outputs retained under \path{outputs_cloth/}; summary CSVs retained under a local \path{csv/} folder.
+\end{itemize}
+
+\section{Pivot hypothesis and success definition}
+\subsection{Hypothesis}
+If exact edges fluctuate (edge Jaccard \(\ll 1\)) but ball-growth geometry is stable, then a coarse-grained object --- communities on the cloth core and an inter-community super-graph --- should exhibit intermediate stability: greater than raw edges and robust enough to define ``thread scale'' structure.
+
+\subsection{Success definition}
+Stage--2 pivot succeeds if, in a fixed regime (start with \(N=8\), \(n=0.8\), \(W_{\mathrm{coh}}=100\) on the hits1 connected cloth baseline):
+\begin{itemize}
+\item community partitions show moderate-to-strong agreement across seeds (NMI/ARI),
+\item the community super-graph is more stable than raw edge sets,
+\item super-graph geometry diagnostics (ball growth) are at least as stable as the current cloth ball-growth curves,
+\item and these conclusions survive modest variations (seeds, epoch length, binning).
+\end{itemize}
+
+\section{Operational definition of the base graph for coarse-graining}
+\subsection{Base adjacency}
+Use the \textbf{hits1 used-by-core cloth core} as the base object: the directed edge set \path{core_edges_used} and its induced event set \path{core_events_used}. For community detection, build the undirected projection of this edge set (treat each directed edge as an undirected adjacency).
+
+\subsection{Why hits1 baseline}
+hits1 yields a connected cloth and very stable ball-growth metrics at high \(n\). It provides the ``bed-sheet'' substrate on which communities can be detected. hits2 is retained as a motif detector and robustness probe, but is not used as the primary base graph at this stage.
+
+\section{Test 4A: Community-structure stability}
+\subsection{Parameters}
+\begin{itemize}
+\item Fixed regime: \(N = 8\), \(n = 0.8\), \(W_{\mathrm{coh}} = 100\), hits1 baseline.
+\item Seeds: 5--10 (use existing checkpoint ensembles if available).
+\item Epoch: start with the x10, bins=20 baseline (stable ball-growth regime), then vary.
+\end{itemize}
+
+\subsection{Procedure}
+For each seed \(s\):
+\begin{enumerate}
+\item Extract the cloth core edge set (hits1): \texttt{core\_edges\_used}.
+\item Build undirected projection \(G^{\mathrm{core}}_s\) for community detection.
+\item Apply community detection:
+\begin{itemize}
+\item Primary: Louvain modularity (fast, standard).
+\item Alternative: Leiden (higher quality), or spectral clustering for comparison.
+\end{itemize}
+\item Record the partition vector \(\mathbf{c}_s\): mapping from event to community ID, and record community count \(K_s\).
+\end{enumerate}
+
+\subsection{Partition similarity observables}
+For each pair of seeds \((s,s')\), compute:
+\begin{itemize}
+\item Normalised Mutual Information (NMI) between \(\mathbf{c}_s\) and \(\mathbf{c}_{s'}\).
+\item Adjusted Rand Index (ARI) between \(\mathbf{c}_s\) and \(\mathbf{c}_{s'}\).
+\item Community-count consistency: distribution of \(K_s\) across seeds.
+\end{itemize}
+Interpretation guide: NMI \(\approx 1\) identical; NMI \(\approx 0\) random; NMI \(>0.5\) moderate; \(>0.7\) strong.
+
+\subsection{Super-graph stability observables}
+For each seed \(s\), build a directed community super-graph \(G^{\mathrm{super}}_s\):
+\begin{itemize}
+\item nodes: communities from \(\mathbf{c}_s\),
+\item edges: \(C_i\to C_j\) exists if any cloth-core edge \((u\to v)\) crosses from \(u\in C_i\) to \(v\in C_j\),
+\item weights: number of crossing edges (aggregate flow).
+\end{itemize}
+
+Across seed pairs:
+\begin{itemize}
+\item Super-graph edge Jaccard (after label alignment).
+\item Weighted flow correlation (Pearson correlation on common edges).
+\item Super-graph ball growth: compare \(|B(r)|/|C|\) curves across seeds via L2 distance.
+\end{itemize}
+
+\subsection{Success criteria (Test 4A)}
+\begin{itemize}
+\item Mean NMI \(> 0.5\) (moderate) or \(> 0.7\) (strong).
+\item Super-graph edge Jaccard \(\gg\) raw edge Jaccard (e.g.\ \(> 0.2\) vs \(\approx 0.01\)).
+\item Super-graph ball-growth L2 distances \(\lesssim\) cloth ball-growth distances on the hits1 core.
+\end{itemize}
+
+\section{Test 4B: Event-filtered edge core}
+\subsection{Rationale}
+Persistent events are often more stable than exact edges. Filter edges to those whose endpoints are persistent events, suppressing seed-specific micro-loops.
+
+\subsection{Procedure}
+For each seed \(s\):
+\begin{enumerate}
+\item Identify persistent events \(E^{\mathrm{persist}}_s\) using event occupancy (bin hits / number of bins), starting with a permissive threshold.
+\item Define event-filtered core edges: edges \((u\to v)\) with \(u,v\in E^{\mathrm{persist}}_s\) and used by the core.
+\end{enumerate}
+
+\subsection{Observables and success criteria}
+\begin{itemize}
+\item Edge Jaccard across seeds improves relative to raw hits1 edges.
+\item Cloth remains connected (no severe fragmentation).
+\item Ball-growth stability is maintained or improved.
+\end{itemize}
+
+\section{Test 4C: Quantile-based edge persistence}
+\subsection{Rationale}
+Instead of requiring explicit cross-bin repetition (hits2), keep the top \(q\%\) most-used core edges over an epoch (high-traffic backbone). This is a coarse-grained persistence proxy without mutating primitives.
+
+\subsection{Procedure}
+For each seed \(s\):
+\begin{enumerate}
+\item Compute per-edge occupancy \(p_{\mathrm{persist}}(u\to v)=\text{bin\_hits}(u\to v)/B\) from the run ledger.
+\item Keep edges above a quantile threshold (e.g.\ top 10\%, 20\%, 30\%).
+\item Evaluate connectivity and geometry on this quantile cloth.
+\end{enumerate}
+
+\subsection{Success criteria}
+\begin{itemize}
+\item Edge Jaccard increases as the quantile becomes stricter (top 10\% more stable than top 30\%).
+\item Quantile cloth remains connected at intermediate thresholds (e.g.\ 20\%).
+\item Ball-growth stability maintained.
+\end{itemize}
+
+\section{Implementation notes}
+\subsection{Packages}
+Community detection can be implemented with \texttt{python-louvain} (Louvain) or \texttt{leidenalg} (Leiden), with graph handling in \texttt{networkx} or \texttt{igraph}. NMI and ARI can be computed with \texttt{sklearn.metrics}. For super-graph label alignment use maximum-weight bipartite matching (Hungarian algorithm; \texttt{scipy.optimize.linear\_sum\_assignment}).
+
+\subsection{Directed versus undirected handling}
+Community detection is performed on an undirected projection of the cloth core. The resulting community labels are then used to build a directed super-graph for flow stability analysis.
+
+\subsection{No new runs requirement}
+Test 4A and 4B can be performed offline on existing hits1 ensembles (recommended starting point). Test 4C requires per-edge occupancy counts; if these are not logged explicitly, they can be reconstructed from stored ledgers.
+
+\section{Gated execution plan}
+\begin{enumerate}[label=\arabic*.]
+\item Gate 0: Confirm hits1 cloth baseline (connected core; stable ball-growth) in the fixed regime.
+\item Gate 1: Community partitions are stable (NMI/ARI thresholds achieved).
+\item Gate 2: Super-graph stability exceeds raw edge stability.
+\item Gate 3: Geometry diagnostics on the super-graph are stable across seeds.
+\item Gate 4: Only then attempt additional ``physics'' proxies (e.g.\ causal-frontier definitions on cloth) if desired.
+\end{enumerate}
+
+\section{Deliverables}
+\begin{itemize}
+\item A reproducible analysis script that, given an ensemble folder, outputs: NMI/ARI matrices, super-graph stability tables, and super-graph ball-growth curves.
+\item A compact CSV summary similar to the existing survival tables, but at the community and super-graph level.
+\item A short checkpoint lab note documenting whether the pivot succeeded at Gate 1/2/3.
+\end{itemize}
+
+\end{document}

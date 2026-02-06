@@ -1,0 +1,93 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{enumitem}
+\setlist{nosep}
+
+\title{BCQM VII Stage--2 Pivot Checkpoint\\Communities and Super-Graph Cloth Validation (v0.1)}
+\author{Peter M.~Ferguson \\ \textit{Independent Researcher}}
+\date{2 February 2026}
+
+\begin{document}
+\emergencystretch=2em
+\sloppy
+\maketitle
+
+\section*{Purpose}
+This checkpoint records the Stage--2 pivot and the supporting computational evidence up to (and including) the latest Gate--4 localisation runs. It is intended as a stable reference point that can be cited or appended in later BCQM VII drafts. The Gate scheme used throughout is the pivot plan's \textbf{Gate 0--4} convention.
+
+\section*{Context}
+Stage--1 (BCQM VI) established: (i) two-step emergence (connectivity first, islands later), (ii) mechanism separation via ablations (nospace / space-on / glue-off), (iii) time-resolved ``space on, islands fluctuating'', and (iv) ball-growth as the robust geometry diagnostic on the short, fast-mixing active slice. Stage--2 (BCQM VII) aims to define a persistent geometry object (``cloth'') beyond \(V_{\mathrm{active}}(t)\) and to pose geometry/metric tests on that object.
+
+\section*{Provenance and reproducibility}
+\begin{itemize}
+\item Code provenance: BCQM VII began from a cryptographically verified baseline (SHA256 14/14 matches) to the BCQM VI v0.1.0 reference implementation (Zenodo DOI 10.5281/zenodo.18403109), then continued development in \texttt{PMF57/BCQM\_VII}.
+\item Outputs: simulation outputs are kept under \path{outputs_cloth/}. Consolidated analysis tables are kept under a local \path{csv/} folder.
+\item Scripts: all analysis scripts used here are stored in the repo under \path{bcqm_vii_cloth/analysis/}.
+\end{itemize}
+
+\section*{Stage--2 cloth experiments prior to pivot}
+The first Stage--2 cloth attempts sought a persistent edge backbone via bin-level persistence.
+\begin{itemize}
+\item \textbf{hits1} (\texttt{min\_bin\_hits}=1): produced connected cloth cores and very stable geometry diagnostics (ball-growth curves), but exact edge identity across seeds was strongly unstable (near-zero edge Jaccard).
+\item \textbf{hits2} (\texttt{min\_bin\_hits}=2): isolated tiny recurrent pockets (motifs) rather than a spanning cloth backbone; this remained true under longer epochs (x5/x10) and bin coarsening (bins=20 and 10 at x10).
+\end{itemize}
+A key empirical lesson emerged: stability appears first at the level of \emph{geometry class} (diagnostics) rather than at the level of exact microstructure (edge identity), at least at current N and epoch lengths. This motivated the pivot to a coarse-grained cloth representation.
+
+\section*{Pivot: from molecular edges to communities and a super-graph}
+The pivot plan (\path{BCQM_pivot_forward_plan_v0.2.2.tex}) reframes the geometry object:
+\begin{itemize}
+\item Use the connected hits1 used-by-core cloth as the base adjacency (undirected projection) for community detection.
+\item Construct a directed community super-graph (communities as nodes; inter-community flows as weighted edges).
+\item Validate stability and geometry at the super-graph level (Gates 1--3) before attempting higher-level physics proxies (Gate 4).
+\end{itemize}
+
+\section*{Gate status summary}
+\subsection*{Gate 0: baseline cloth exists and is diagnostic-stable}
+Gate 0 is established by the hits1 cloth baseline in the high cross-link regime: connected components exist, and ball-growth curves are stable across seeds (as documented by the earlier survival and metric-stability CSVs).
+
+\subsection*{Gate 1: community partitions are stable across seeds}
+Applying Louvain community detection to the hits1 cloth baseline (x10 epoch, bins=20, 5 seeds per quadrant) yields strong partition agreement across seeds (NMI \(\approx 0.83\)--0.84; ARI moderate-to-strong). Community counts \(K\) are also consistent: \(K\approx 22\)--23 at \(n=0.8\), while \(K\) grows substantially at \(n=0.4\) (many small communities). These results are summarised in \path{csv/community_supergraph_stability_summary.csv}.
+
+\subsection*{Gate 2: super-graph edges and flow weights are stable}
+Using the same partitions, the super-graph edge sets are substantially more stable than raw edge identity. Super-graph edge-set Jaccard is moderate (\(\sim 0.37\)--0.60 depending on \(N,n\)), and weight correlations on the common edge set are high at \(n=0.8\) (typically \(\sim 0.89\)--0.91). These results are recorded in \path{csv/supergraph_edge_stability.csv} and collated in \path{csv/pivot_gates_1_2_3_summary.csv}.
+
+\subsection*{Gate 3: super-graph geometry diagnostics are stable}
+Ball-growth curves on the super-graph are stable across seeds, with pairwise L2 distances remaining small (regime dependent). A Louvain resolution sweep (\(\gamma\in\{0.5,1.0,1.5,2.0\}\)) shows that conclusions are robust for \(\gamma\ge 1.0\), while \(\gamma=0.5\) is a clear outlier (poor super-graph metric stability). Results are recorded in \path{csv/louvain_resolution_sweep_summary.csv}.
+
+\subsection*{Gate 4: physics proxy -- thread localisation on the super-graph}
+A minimal logging extension was added: per-bin, per-thread traces (\path{cloth_trace}) recording the end-of-bin event ID and a core-membership mask. This enables direct measurement of inter-bin motion on the community super-graph.
+
+\paragraph{High coherence regime (\(n=0.8\)).}
+For hits1, x10, bins=20 with \(N\in\{4,8\}\), hop-distance distributions on the super-graph are strongly local: all transitions are confined to \(d\in\{0,1,2\}\) with no long hops (\(d\ge 3\)). The dominant mass is at \(d=1\), consistent with ``local motion'' on the emergent coarse geometry. Outputs are stored under \path{csv/gate4/} with tags (e.g. \path{gate4_n0p8_all_all_*}).
+
+\paragraph{Low coherence regime (\(n=0.4\)).}
+At \(n=0.4\), a revised Gate--4 analysis (partition built on all-used edges; super-graph built on all-used flows) restores full mapping coverage and yields comparable hop distributions. Even in this weaker regime, motion remains local (0--2 hops only), though the distribution shifts modestly toward \(d=2\) relative to \(n=0.8\). Core vs halo comparisons are available via the stored \path{core_mask} and the tagged output CSVs.
+
+\section*{Deliverables status (pivot plan)}
+The pivot plan's deliverables are now:
+\begin{itemize}
+\item \textbf{Reproducible analysis scripts and outputs:} satisfied (community stability, super-graph stability, resolution sweep, and Gate--4 localisation scripts; corresponding CSVs in \path{csv/}).
+\item \textbf{Compact summary tables:} satisfied (Gate 1--3 summary CSVs and resolution sweep; Gate--4 tagged CSVs).
+\item \textbf{Checkpoint note:} this document.
+\end{itemize}
+
+\section*{Next steps}
+\begin{enumerate}[label=\arabic*.]
+\item Use the stable super-graph cloth object as the Stage--2 substrate for any additional geometry or proxy tests (e.g. robustness to small parameter changes, ablations on the coarse object).
+\item If stricter-than-hits1 edge backbones are still desired, test the two minimalism-preserving definitions proposed in the pivot plan: (i) event-filtered edge cores, and (ii) quantile persistence on core-edge occupancy.
+\item Optional later cross-check: Leiden community detection as an algorithm-family validation, if required by reviewers.
+\end{enumerate}
+
+\end{document}

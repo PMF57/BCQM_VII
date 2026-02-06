@@ -1,0 +1,157 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{enumitem}
+\setlist{nosep}
+
+\title{BCQM VII Lab Note\\Test 2.1 (Spectral dimension): random-walk return probability on the community super-graph (v0.1)}
+\author{Peter M.~Ferguson \\ \textit{Independent Researcher}}
+\date{3 February 2026}
+
+\begin{document}
+\emergencystretch=2em
+\sloppy
+\maketitle
+
+\section*{Purpose}
+Implement Test~2.1 (spectral dimension) for Stage--2 by estimating the time-dependent spectral-dimension curve \(d_s(t)\) on the \emph{community super-graph} associated with the cloth object. This test is marked \emph{optional} in the Phase--1 plan because it is known to be fragile at small community-graph sizes \(K\). The objective here is therefore (i) to execute the test cleanly on the pivot baseline, (ii) to determine whether any quasi-plateau exists on current datasets, and (iii) to record finite-size limitations explicitly and without overinterpretation.
+
+\section*{Dataset and scripts}
+\paragraph{Dataset.}
+Pivot baseline ensemble (hits1, x10 epoch, bins=20, 5 seeds per quadrant) in:
+\begin{itemize}
+\item \path{outputs_cloth/ensemble_W100_N4N8_hits1_x10_bins20/}
+\end{itemize}
+
+\paragraph{Script.}
+\begin{itemize}
+\item \path{bcqm_vii_cloth/analysis/spectral_dimension_supergraph.py}
+\end{itemize}
+
+\paragraph{CSV artefacts.}
+Each run writes:
+\begin{itemize}
+\item \path{<tag>_spectral_dim_curves.csv}\quad (per-seed \(P_0(t)\) and \(d_s(t)\) curves)
+\item \path{<tag>_spectral_dim_runs.csv}\quad (per-seed window statistics over a nominated ``plateau'' window)
+\item \path{<tag>_spectral_dim_summary.csv}\quad (mean over seeds for each quadrant)
+\end{itemize}
+
+\section*{Method (summary)}
+For each seed and quadrant \((N,n)\):
+\begin{enumerate}
+\item Build an \emph{undirected} cloth graph from the chosen edge set:
+  \begin{itemize}
+  \item core: \path{core_edges_used}
+  \item all: \path{core_edges_used} $\cup$ \path{halo_edges_used}
+  \end{itemize}
+\item Apply Louvain community detection (resolution \(\gamma=\)\texttt{--resolution}) on this undirected cloth graph to obtain a partition \(\pi:\mathrm{event}\mapsto\mathrm{community}\).
+\item Build the \emph{undirected} community super-graph: communities are nodes; an edge exists between communities if any cloth edge crosses between their member events.
+\item Define the (simple) random-walk transition matrix \(P\) on the super-graph (degree-normalised adjacency).
+\item Compute the return probability \(P_0(t)\) and the spectral-dimension curve \(d_s(t)\):
+\begin{itemize}
+\item \textbf{MC mode} (\texttt{--mode mc}): Monte-Carlo estimate of \(P_0(t)\) from \texttt{--n\_walks} random walks up to \texttt{--t\_max}.
+\item \textbf{Exact mode} (\texttt{--mode exact}): noise-free evaluation using eigenvalues \(\{\lambda_i\}\) of \(P\):
+\[
+P_0(t)=\frac{1}{K}\,\mathrm{tr}\!\left(P^t\right)=\frac{1}{K}\sum_i \lambda_i^t .
+\]
+\end{itemize}
+\item Estimate
+\[
+d_s(t) \;=\; -2\,\frac{d\log P_0(t)}{d\log t},
+\]
+using a discrete log-derivative on the integer-time curve.
+\item \textbf{Window summary (diagnostic only):} over \([t_{\min},t_{\max}]\) (given by \texttt{--plateau\_tmin}, \texttt{--plateau\_tmax}), compute summary statistics intended to indicate whether \(d_s(t)\) is approximately flat in that window. A large within-window variation indicates \emph{no plateau}.
+\end{enumerate}
+
+\section*{Runs executed}
+The pivot baseline was run in two stages.
+
+\paragraph{Stage A: Monte-Carlo return probability (core/core default).}
+The recommended first run (core-only) was executed to maximise \(K\) at low \(n\):
+\begin{verbatim}
+mkdir -p csv/spectral_dim
+python3 bcqm_vii_cloth/analysis/spectral_dimension_supergraph.py \
+  --run_dir outputs_cloth/ensemble_W100_N4N8_hits1_x10_bins20 \
+  --out_dir csv/spectral_dim \
+  --tag pivot_core \
+  --edge_source core \
+  --resolution 1.0 \
+  --t_max 200 \
+  --n_walks 20000 \
+  --plateau_tmin 10 \
+  --plateau_tmax 80 \
+  --rng_seed 0
+\end{verbatim}
+
+A sensitivity run (all/all) was supported by the script via \texttt{--edge\_source all}. For Gate~2 geometry diagnostics, interpretation focuses on the core/core object (consistent with A2 and the curvature/ball-growth lab notes).
+
+\paragraph{Stage B: Exact return probability (noise-free).}
+An updated script added \texttt{--mode exact} (transition-matrix eigenvalues; no Monte-Carlo noise) and the pivot baseline was re-run:
+\begin{verbatim}
+python3 bcqm_vii_cloth/analysis/spectral_dimension_supergraph.py \
+  --run_dir outputs_cloth/ensemble_W100_N4N8_hits1_x10_bins20 \
+  --out_dir csv/spectral_dim \
+  --tag pivot_core_exact \
+  --edge_source core \
+  --resolution 1.0 \
+  --mode exact \
+  --t_max 200 \
+  --plateau_tmin 10 \
+  --plateau_tmax 80
+\end{verbatim}
+
+\section*{Results (qualitative)}
+\paragraph{No robust plateau on current super-graphs.}
+Across the pivot baseline quadrants, the computed \(d_s(t)\) curves do \emph{not} exhibit a stable plateau over a broad diffusion-time range at the present community super-graph sizes \(K\sim\mathcal{O}(10^1)\) to \(\mathcal{O}(10^2)\). This remains true even in \texttt{--mode exact}, indicating that the limitation is not Monte-Carlo noise but \emph{finite-size / fast-mixing structure}.
+
+\paragraph{MC mode: consistent means without flatness.}
+In \texttt{--mode mc}, some quadrants yield a consistent \emph{mean} effective value (between seeds) in the nominated window \([10,80]\), but the within-window variability remains large: \(d_s(t)\) drifts across the window rather than behaving as a near-constant slope in \(\log P_0(t)\) versus \(\log t\). At lower \(n\), the derivative estimator becomes particularly unstable (returns become sparse in Monte-Carlo), leading to strongly finite-size / noise dominated window statistics.
+
+\paragraph{Exact mode: clarifies the mechanism (mixing-to-stationary).}
+In \texttt{--mode exact}, \(P_0(t)\) is deterministic and \(d_s(t)\) is substantially less jittery, but the curve still does not plateau:
+\begin{itemize}
+\item In high-coherence cases where the super-graph is small (typically \(K\approx 20\)--25), the random walk mixes rapidly and \(P_0(t)\to 1/K\). Consequently, \(\log P_0(t)\) flattens and \(d_s(t)\to 0\) at moderate \(t\), so a late-time ``plateau'' window is dominated by the approach-to-stationary regime rather than by an intermediate scaling regime.
+\item In larger-\(K\) cases (notably the low-\(n\) core/core super-graphs), an \emph{early-time transient} with \(d_s(t)\) of order unity can be present, but it decays with \(t\) and can show even/odd oscillations (graph periodicity). This is consistent with a finite-graph crossover (diffusion $\rightarrow$ mixing), not a stable dimension-like scaling window.
+\end{itemize}
+
+\section*{Interpretation}
+\paragraph{Why spectral dimension is failing to plateau here.}
+A clean spectral-dimension plateau typically requires a separation of scales:
+\[
+\text{(very small \(t\))} \;\;\ll\;\; \text{(intermediate diffusion regime)} \;\;\ll\;\; \text{(mixing time)} .
+\]
+On these community super-graphs, \(K\) is small enough that the mixing time is short, leaving little (or no) intermediate regime where \(\log P_0(t)\) is well-approximated by a single power law. In other words, the diagnostic is \emph{structurally finite-size dominated} at current \(K\), even after removing Monte-Carlo noise.
+
+\paragraph{What can be reported honestly at Stage--2.}
+Test~2.1 can be recorded as \emph{executed}. The correct Stage--2 reading is:
+\begin{itemize}
+\item no robust \(d_s(t)\) plateau exists on current super-graphs (core/core pivot baseline),
+\item early-time transient ``effective \(d_s\)'' values exist in some regimes but are not stable,
+\item therefore spectral dimension is not a primary Gate~2 geometry diagnostic at this stage.
+\end{itemize}
+This aligns with the plan’s explicit caution that Test~2.1 is informative but fragile at \(N=8\).
+
+\paragraph{Next steps if spectral dimension is revisited.}
+If Test~2.1 is later pursued as a stronger claim (Phase--2 / scaling), the most direct upgrades are:
+\begin{itemize}
+\item evaluate at larger \(N\) where \(K\) increases (e.g.\ \(N=16,32,\dots\)) to open an intermediate diffusion regime;
+\item consider a lazy random walk (aperiodic) to suppress even/odd oscillations cleanly;
+\item fit \(\log P_0(t)\) versus \(\log t\) over an early window selected by inspection of the curve, rather than fixing a single late-time window across all \(K\);
+\item report the associated \(K\), mean degree, and a mixing-time proxy alongside \(d_s\), to make finite-size limitations explicit.
+\end{itemize}
+
+\section*{Conclusion}
+Test~2.1 (spectral dimension on the community super-graph) has been implemented and executed on the pivot baseline, including a noise-free exact mode based on the transition matrix spectrum. The results show no robust plateau in \(d_s(t)\) at current community sizes: the curves are dominated by finite-size and fast-mixing effects, with at most a short early-time transient. Accordingly, Test~2.1 remains an optional, non-blocking diagnostic at Stage--2, while ball-growth and curvature proxies remain the primary Gate~2 geometry diagnostics.
+
+\end{document}

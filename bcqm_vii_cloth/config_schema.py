@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List
+# PROVENANCE: BCQM_VII stage2 cloth; schema add trace_threads/trace_stride; 2026-02-02
 
 
 class ConfigError(ValueError):
@@ -138,3 +139,22 @@ def validate(cfg: Dict[str, Any]) -> None:
 
     resolve_seeds(_req(cfg, "seeds"))
     resolve_n_values(_req(cfg, "scan"))
+
+    # Optional Stage-2 cloth config
+    if "cloth" in cfg:
+        cloth = cfg.get("cloth")
+        if not isinstance(cloth, dict):
+            raise ConfigError("cloth must be a mapping")
+        if "enabled" in cloth:
+            bool(cloth.get("enabled"))
+        if "bins" in cloth:
+            _as_int(cloth["bins"], "cloth.bins")
+        if "w_lock" in cloth:
+            _as_float(cloth["w_lock"], "cloth.w_lock")
+        if "min_concurrency" in cloth:
+            _as_int(cloth["min_concurrency"], "cloth.min_concurrency")
+        if "min_bin_hits" in cloth:
+            _as_int(cloth["min_bin_hits"], "cloth.min_bin_hits")
+        if "include_ledger" in cloth:
+            bool(cloth.get("include_ledger"))
+

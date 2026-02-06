@@ -1,0 +1,92 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{enumitem}
+\setlist{nosep}
+
+\title{BCQM VII Stage--2 Checkpoint Lab Note\\Bin coarsening test for strict persistence (hits2) at long epochs (v0.1)}
+\author{Peter M.~Ferguson \\ \textit{Independent Researcher}}
+\date{30 January 2026}
+
+\begin{document}
+\emergencystretch=2em
+\sloppy
+\maketitle
+
+\section*{Purpose}
+This checkpoint tests whether the failure of strict persistence (hits2) to yield a connected edge-cloth core is primarily a \emph{binning artefact}. The hypothesis is that coarsening bins (fewer, longer bins) may increase cross-bin repetition and allow a hits2 cloth to span, while keeping the underlying dynamics unchanged. We also include a calibration run (hits1) to confirm the expected ``connected cloth'' regime at the same long epoch length.
+
+\section*{Context (prior Stage--2 checkpoint)}
+In the initial Stage--2 cloth work:
+\begin{itemize}
+\item \textbf{hits1} (\texttt{min\_bin\_hits}=1) produced a connected edge-cloth core and stable ball-growth geometry across seeds, but exact edge identity remained seed-sensitive.
+\item \textbf{hits2} (\texttt{min\_bin\_hits}=2) tended to collapse to tiny recurrent pockets (or empties), behaving more like a motif detector than a cloth backbone at the tested epoch lengths.
+\end{itemize}
+This checkpoint asks whether that behaviour is due to ``time chopped too finely'' (bins) rather than the persistence definition itself.
+
+\section*{Runs performed}
+All runs used the same long epoch length (x10 of the Stage--2 baseline), \(W_{\mathrm{coh}}=100\), 5 seeds per quadrant, and the same scan grid:
+\begin{itemize}
+\item \(N\in\{4,8\}\), \(n\in\{0.4,0.8\}\)
+\item lockstep support threshold \(w_{\mathrm{lock}}=0.10\)
+\item concurrency diagnostic threshold \texttt{min\_concurrency}=2
+\end{itemize}
+We varied only the bin count and \texttt{min\_bin\_hits}:
+\begin{itemize}
+\item hits2, x10, \textbf{bins=20}
+\item hits2, x10, \textbf{bins=10}
+\item calibration: hits1, x10, \textbf{bins=20}
+\end{itemize}
+Outputs were analysed by set survival (Jaccard on \texttt{core\_edges\_used} and \texttt{core\_events\_used}) and metric survival (L2 distance between normalised ball-growth curves \(|B(r)|/|C|\) across seeds).
+
+\section*{Results}
+\subsection*{1. hits2 remains a motif detector under bin coarsening}
+Coarsening bins from 20 to 10 did not convert hits2 into a connected cloth backbone:
+\begin{itemize}
+\item For \(n=0.8\), hits2 edge cores remain small, with ball-growth component sizes \(\approx 2.4\)--\(3\) on average, and edge-set Jaccard across seeds remains zero in the non-degenerate regimes.
+\item For \(n=0.4\), hits2 often yields empty or near-empty edge cores; any Jaccard values near 1 are therefore dominated by ``identical emptiness'' rather than stable structure.
+\end{itemize}
+Thus, the failure of hits2 to yield a spanning cloth at this scale is not primarily a binning artefact.
+
+\subsection*{2. Calibration (hits1, x10, bins=20) confirms the connected cloth regime}
+The calibration run (hits1 at the same long epoch length) produced large connected cloth components and very stable geometry diagnostics, especially in the high-cross-link regime:
+\begin{itemize}
+\item Event-core survival at \(n=0.8\) is near 1 (Jaccard \(\approx 0.98\) for both \(N=8\) and \(N=4\)).
+\item Ball-growth metric survival is extremely tight (cross-seed L2 distances \(\ll 10^{-3}\) in the \(n=0.8\) regime).
+\item Exact edge-set survival remains small (as previously), indicating that stability appears first at the metric/diagnostic level rather than at exact edge identity.
+\end{itemize}
+
+\section*{Interpretation}
+The bin coarsening test supports the ``channel activity versus cloth'' hierarchy:
+\begin{itemize}
+\item bin-level concurrency captures short-run channelisation,
+\item strict cross-bin repetition (hits2) isolates recurrent motifs,
+\item connected cloth geometry emerges in the permissive regime (hits1) and is stable as a geometry class even when microstructure varies.
+\end{itemize}
+Therefore, if a stricter-than-hits1 edge cloth is required, the next step is to change the persistence definition rather than to further adjust binning.
+
+\section*{Immediate next options}
+Two minimalism-preserving edge persistence definitions are now prioritised for testing:
+\begin{enumerate}[label=\arabic*.]
+\item \textbf{Event-filtered edge core:} define persistent events first, then keep edges between persistent events (used by lockstep core), which may suppress seed-specific micro-loops.
+\item \textbf{Quantile persistence:} keep the top \(q\)\% most-used core edges over the epoch (rather than requiring cross-bin repetition), to obtain a stable backbone class without enforcing exact repeatability.
+\end{enumerate}
+
+\section*{Files}
+This checkpoint corresponds to the consolidated summary table:
+\begin{itemize}
+\item \texttt{cloth\_bin\_coarsening\_summary\_W100\_x10.csv}
+\end{itemize}
+
+\end{document}

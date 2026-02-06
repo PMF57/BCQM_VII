@@ -1,0 +1,116 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{enumitem}
+\setlist{nosep}
+
+\title{BCQM VII Lab Note\\Test 2.3 (Curvature proxy): Forman--Ricci curvature on the community super-graph (v0.1)}
+\author{Peter M.~Ferguson \\ \textit{Independent Researcher}}
+\date{3 February 2026}
+
+\begin{document}
+\emergencystretch=2em
+\sloppy
+\maketitle
+
+\section*{Purpose}
+Implement and evaluate a first curvature-like diagnostic for Stage--2 by computing (i) Forman--Ricci curvature on edges of the community super-graph, (ii) augmented Forman curvature including triangle contributions, and (iii) clustering/transitivity sanity checks. The intent is not to claim a continuum curvature, but to test whether the coarse-grained geometry object exhibits loop/triangle structure in a regime-dependent, reproducible way.
+
+\section*{Dataset and scripts}
+\paragraph{Dataset.}
+The pivot baseline ensemble (hits1, x10 epoch, bins=20, 5 seeds per quadrant) in:
+\begin{itemize}
+\item \path{outputs_cloth/ensemble_W100_N4N8_hits1_x10_bins20/}
+\end{itemize}
+
+\paragraph{Script.}
+\begin{itemize}
+\item \path{bcqm_vii_cloth/analysis/curvature_supergraph_forman.py}
+\end{itemize}
+
+\paragraph{CSV artefacts.}
+Two runs of the script were performed, differing only in edge-source choice:
+\begin{itemize}
+\item \textbf{core/core geometry object:} \path{curvature_pivot_core_supergraph_curvature_summary.csv} and \path{curvature_pivot_core_supergraph_curvature_runs.csv}
+\item \textbf{all/all geometry object:} \path{curvature_pivot_all_supergraph_curvature_summary.csv} and \path{curvature_pivot_all_supergraph_curvature_runs.csv}
+\end{itemize}
+
+\section*{Method (summary)}
+For each seed and quadrant \((N,n)\):
+\begin{enumerate}
+\item Build an undirected cloth graph from the chosen edge set:
+  \begin{itemize}
+  \item core: \path{core_edges_used}
+  \item all: \path{core_edges_used} $\cup$ \path{halo_edges_used}
+  \end{itemize}
+\item Apply Louvain community detection (resolution $\gamma=1.0$) on this undirected graph to obtain a partition \(\pi: \mathrm{event}\mapsto \mathrm{community}\).
+\item Build the \emph{undirected} community super-graph: add an edge between communities if any cloth edge crosses between them.
+\item Compute:
+  \begin{itemize}
+  \item transitivity and mean clustering coefficient on the super-graph,
+  \item per-edge triangle counts,
+  \item Forman edge curvature \(F(e)=4-\deg(u)-\deg(v)\),
+  \item augmented Forman curvature \(F_{\mathrm{aug}}(e)=F(e)+3T(e)\), where \(T(e)\) is triangles containing edge \(e\).
+  \end{itemize}
+\end{enumerate}
+
+\section*{Results}
+Table~\ref{tab:curv} compares the core/core and all/all outcomes (mean over seeds) for each quadrant.
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{@{}cccccccc@{}}
+\toprule
+\(N\) & \(n\) & source & \(K\) & trans & clust & \(F_{\mathrm{mean}}\) & \(F_{\mathrm{aug,mean}}\) \\
+\midrule
+4 & 0.4 & core & 44.6 & 0.0258 & 0.0150 & $-0.0080$ & $+0.0730$ \\
+4 & 0.4 & all  & 24.6 & 0.0000 & 0.0000 & $+0.0852$ & $+0.0852$ \\
+4 & 0.8 & core & 21.8 & 0.0000 & 0.0000 & $+0.0962$ & $+0.0962$ \\
+4 & 0.8 & all  & 21.8 & 0.0000 & 0.0000 & $+0.0962$ & $+0.0962$ \\
+\midrule
+8 & 0.4 & core & 76.6 & 0.0881 & 0.0552 & $-0.1857$ & $+0.1086$ \\
+8 & 0.4 & all  & 23.6 & 0.0000 & 0.0000 & $+0.0888$ & $+0.0888$ \\
+8 & 0.8 & core & 22.2 & 0.0000 & 0.0000 & $+0.0945$ & $+0.0945$ \\
+8 & 0.8 & all  & 22.2 & 0.0000 & 0.0000 & $+0.0945$ & $+0.0945$ \\
+\bottomrule
+\end{tabular}
+\caption{Curvature-proxy summary on the community super-graph. ``source'' indicates whether the partition and super-graph were constructed from core-only edges or core+halo (all-used) edges. trans = transitivity; clust = mean clustering coefficient. \(F\) is unweighted Forman edge curvature; \(F_{\mathrm{aug}}\) includes triangle contributions.}
+\label{tab:curv}
+\end{table}
+
+\paragraph{Key empirical pattern.}
+At \(n=0.8\), core/core and all/all are identical: the super-graph is sparse and triangle-free (transitivity $=0$, clustering $=0$), and \(F_{\mathrm{aug}}=F\) because no triangles exist.
+
+At \(n=0.4\), the choice of edge source becomes decisive. Under core/core, the super-graph exhibits nonzero triangle closure (especially for \(N=8\): transitivity $\approx 0.088$, clustering $\approx 0.055$), and augmented Forman curvature differs substantially from degree-only Forman curvature. Under all/all, the super-graph collapses to a much smaller community graph (\(K\approx 24\)) and becomes triangle-free (transitivity $=0$, clustering $=0$), eliminating the triangle contribution entirely.
+
+\section*{Interpretation}
+\paragraph{What curvature is detecting here.}
+Forman curvature \(F(e)=4-\deg(u)-\deg(v)\) is primarily a degree/branching proxy; negative mean values indicate that many edges connect higher-degree nodes (expansive branching). Augmented Forman curvature \(F_{\mathrm{aug}}\) adds a positive correction proportional to triangle closure, separating ``branching'' from ``loop closure''.
+
+\paragraph{Low-\(n\) sensitivity and the role of halo edges.}
+The all/all construction at \(n=0.4\) removes triangle closure by introducing shortcut edges that collapse the community graph. This is consistent with earlier A2 findings: all/all at low \(n\) shrinks the community super-graph and worsens super-graph ball-growth stability. In curvature terms, halo edges act as closing shortcuts that suppress mesoscopic loop structure detectable under core/core.
+
+\paragraph{Methodological consequence.}
+Curvature-like proxies are meaningful only when the super-graph retains mesoscopic structure. For geometry tests (Gate 2), core/core is the preferred default; for localisation/trajectory tests (Gate 4), all/all may still be necessary for coverage and should be used with explicit coverage reporting.
+
+\section*{Conclusion}
+Test 2.3 (curvature proxy) has been implemented at the super-graph level and reveals a clear regime dependence:
+\begin{itemize}
+\item High \(n\): sparse, triangle-free super-graph backbone (core and all coincide).
+\item Low \(n\): core/core retains a richer, triangle-bearing super-graph; all/all collapses the super-graph and eliminates triangle closure.
+\end{itemize}
+This supports the Stage--2 pivot: geometry-relevant structure is clearer on the coarse object, and the choice of ``which graph'' (core-only versus all-used) is itself a principled part of the validation pipeline.
+
+\end{document}

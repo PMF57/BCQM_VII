@@ -1,0 +1,95 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{enumitem}
+\setlist{nosep}
+
+\title{BCQM VII Stage--2 Checkpoint\\A3 Scale-Up: N=16 and N=32 stress tests (v0.1)}
+\author{Peter M.~Ferguson \\ \textit{Independent Researcher}}
+\date{2 February 2026}
+
+\begin{document}
+\emergencystretch=2em
+\sloppy
+\maketitle
+
+\section*{Purpose}
+This checkpoint consolidates the A3 scale-up runs at \(N=16\) and \(N=32\) (hits1 cloth, x10 epoch, bins=20, \(n=0.8\), 5 seeds). The goal is to test whether the Stage--2 pivot conclusions---stable mesoscopic ``cloth'' communities, stable super-graph structure, and thread locality on the super-graph---persist beyond the small-\(N\) regime.
+
+\section*{Run definitions}
+\paragraph{Common settings.}
+Both scale-up runs use the same regime:
+\begin{itemize}
+\item Cloth baseline: hits1 (\texttt{min\_bin\_hits}=1), \(W_{\mathrm{coh}}=100\), bins=20, x10 epoch.
+\item Cross-link pressure: \(n=0.8\).
+\item Seeds: 56791--56795.
+\item Logging: \texttt{store\_lists=true} to record \path{core_edges_used} and \path{core_events_used}; and \texttt{trace\_threads=true} with \texttt{trace\_stride=1} to produce \path{cloth_trace} (per-bin per-thread end-of-bin event IDs and core-mask).
+\end{itemize}
+
+\paragraph{Outputs.}
+\begin{itemize}
+\item Run folders: \path{outputs_cloth/gateA3_N16_hits1_x10_bins20_n0p8/} and \path{outputs_cloth/gateA3_N32_hits1_x10_bins20_n0p8/}.
+\item Summary CSVs (generated locally): \path{csv/gateA3_N16/*} and \path{csv/gateA3_N32/*}, including run summaries and ball-growth pairwise stability tables.
+\end{itemize}
+
+\section*{N=16 results (high-level)}
+\subsection*{Run health}
+The \(N=16\) runs are well-behaved: the cloth core is large and connected, trace logging is enabled for all seeds, and the Stage--1 connectivity indicators remain in-family (``space on'').
+
+\subsection*{Cloth geometry stability}
+Across the 5 seeds, cloth ball-growth fraction curves \(|B(r)|/|C|\) are extremely stable (pairwise L2 distances of order \(10^{-4}\)), indicating that the geometry class remains tightly reproducible at \(N=16\).
+
+\subsection*{Interpretation}
+At \(N=16\), the high-\(n\) regime remains close to ``all core'': halo counts are small compared to the core. This is consistent with a dominant coherent population and provides a clean baseline for community and super-graph tests.
+
+\section*{N=32 results (high-level)}
+\subsection*{Run health}
+The \(N=32\) runs are also stable and in-family (``space on''; trace logging present; no pathological warnings). The core cloth is connected and diagnostic-stable, but the core/halo decomposition becomes nontrivial.
+
+\subsection*{Core/halo structure}
+Unlike \(N=16\), at \(N=32\) the halo contribution is substantial (large persistent event and edge counts outside the dominant core). This is a desirable property for Stage--2: it places the model in a more realistic regime where a stable core background coexists with a significant ambient population.
+
+\subsection*{Cloth geometry stability}
+Even with a large halo, the cloth geometry diagnostic remains stable: pairwise L2 distances between normalised ball-growth curves remain small (order \(10^{-3}\)). This supports the ``stability at the level of geometry class, not microstructure'' interpretation at larger N.
+
+\section*{Gate--4 localisation at N=32 (physics proxy)}
+\subsection*{All-used partition and super-graph (recommended)}
+Using \texttt{partition\_source=all} and \texttt{supergraph\_source=all} yields full mapping coverage (coverage \(=1\), missing labels \(=0\), no infinite distances). In this regime, hop-distance motion on the super-graph remains strongly local:
+\begin{itemize}
+\item all inter-bin transitions lie in \(d\in\{0,1,2\}\) with \(P(d\ge 3)=0\),
+\item probability mass concentrates at \(d=0\) and \(d=1\) (dominant local motion),
+\item core versus halo hop distributions are similar, with halo at most slightly ``rougher'' (small increase in \(d=2\) mass).
+\end{itemize}
+Thus, even at \(N=32\) with a nontrivial halo, threads respect the emergent coarse geometry.
+
+\subsection*{Core-only partition/super-graph (diagnostic caveat)}
+Using \texttt{partition\_source=core} and \texttt{supergraph\_source=core} yields very low mapping coverage (about 8\%), with hundreds of unmapped transitions per seed. Hop statistics in this mode are therefore computed on a small and biased subset of transitions and should not be used for physical claims. This is a methodological result: localisation tests require a partition/super-graph that covers the traced event IDs, which at larger N and nontrivial halo implies an all-used construction.
+
+\section*{Interpretation and stake-in-the-ground}
+These A3 scale-ups support the Stage--2 pivot claims beyond the small-\(N\) regime:
+\begin{itemize}
+\item The hits1 cloth baseline remains connected and geometry-diagnostic stable at \(N=16\) and \(N=32\).
+\item At \(N=32\), a large halo emerges naturally while cloth-level diagnostics remain stable, reinforcing the ``core+ambience'' interpretation.
+\item Gate--4 localisation (threads move locally on the super-graph) holds in the high-\(n\) regime at \(N=32\) when the partition and super-graph are built from all-used edges/flows.
+\end{itemize}
+In short: scale-up does not break the pivot; instead it strengthens it by moving from near-all-core behaviour (N=16) to a regime with a meaningful ambient population (N=32) while preserving stable coarse geometry and local motion on the emergent substrate.
+
+\section*{Next steps}
+\begin{enumerate}[label=\arabic*.]
+\item Optional algorithm-family cross-check (Leiden) for Gate 1--3 if required.
+\item Partition-source sensitivity formalisation: compare Gate 1--3 outputs for \texttt{partition\_source=core} vs \texttt{all} in the low-\(n\) regime.
+\item Extend localisation tests to \(n=0.4\) at higher N if desired, using all-used partitions for full coverage and meaningful core/halo comparisons.
+\end{enumerate}
+
+\end{document}

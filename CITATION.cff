@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite the BCQM VII paper (Zenodo DOI) below."
+title: "BCQM VII code and artefacts (Stage–2 cloth programme)"
+authors:
+  - family-names: "Ferguson"
+    given-names: "Peter M."
+version: "1.0"
+date-released: "2026-02-05"
+doi: "10.5281/zenodo.18497217"
+
+preferred-citation:
+  type: report
+  title: "Boundary-Condition Quantum Mechanics VII: Emergent Coarse Spatial Cloth from Cross-Linked Event Bundles"
+  authors:
+    - family-names: "Ferguson"
+      given-names: "Peter M."
+  year: 2026
+  month: 2
+  day: 5
+  publisher: "Zenodo"
+  doi: "10.5281/zenodo.18497217"
+  url: "https://doi.org/10.5281/zenodo.18497217"
+  identifiers:
+    - type: doi
+      value: "10.5281/zenodo.18497216"
+      description: "Concept DOI (all versions)"

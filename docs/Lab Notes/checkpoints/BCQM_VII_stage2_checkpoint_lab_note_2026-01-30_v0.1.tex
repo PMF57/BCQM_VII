@@ -1,0 +1,116 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[british]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage{enumitem}
+\setlist{nosep}
+
+\title{BCQM VII Stage--2 Checkpoint Lab Note\\Cloth extraction, survival, and metric stability (v0.1)}
+\author{Peter M.~Ferguson \\ \textit{Independent Researcher}}
+\date{30 January 2026}
+
+\begin{document}
+\emergencystretch=2em
+\sloppy
+\maketitle
+
+\section*{Checkpoint scope}
+This note consolidates the first Stage--2 (``cloth'') computational milestone in BCQM VII. Stage--1 (BCQM VI) established: (i) two-step emergence (connectivity first, islands later), (ii) separability of space-connectivity and clock coherence via ablations, (iii) time-resolved ``space on, islands fluctuating'' behaviour, and (iv) ball growth as the robust geometry diagnostic on the short active slice. Stage--2 now defines a persistent geometry object (``cloth'') beyond the yarn-like active slice and tests whether geometry diagnostics become stable across seeds and settings.
+
+\section*{Artefact handling (local organisation)}
+For this checkpoint the following organisation was adopted:
+\begin{itemize}
+\item All derived summary tables (Jaccard survival and metric-distance results) were collected into a local \texttt{csv/} folder on the Desktop.
+\item Raw run folders (bring-up and ensemble) remain under \texttt{outputs\_cloth/}, and the corresponding zip archives are retained alongside them.
+\end{itemize}
+
+\section*{Stage--2 cloth definition (v0.1)}
+The Stage--2 cloth extractor is bin-based and minimalism-preserving:
+\begin{itemize}
+\item The run is partitioned into bins (here: 80).
+\item A lockstep-supported ``core'' is identified per bin using overlap membership at a low threshold (\(w_{\mathrm{lock}}=0.10\)).
+\item ``Persistence'' is computed from per-bin \emph{usage} of events and directed edges by core members (presence counted once per bin), without storing mutable weights on primitives.
+\item Concurrent edges/events (count$\geq$2 within a bin) are retained as a reinforcement diagnostic, but not used as the sole backbone criterion.
+\end{itemize}
+Two persistence thresholds were explored:
+\begin{itemize}
+\item \textbf{hits1:} \texttt{min\_bin\_hits}=1 (permissive; yields a connected cloth core)
+\item \textbf{hits2:} \texttt{min\_bin\_hits}=2 (stricter; isolates repeated cross-bin structure)
+\end{itemize}
+
+\section*{Bring-up sequence (what changed and why)}
+The initial attempt to define an edge cloth using \emph{concurrent edges only} was found to be too sparse at this scale: edge concurrency is real but rarely repeats across bins. A refinement was therefore introduced:
+\begin{itemize}
+\item define the edge cloth core from edges \emph{used by the lockstep core} across bins (presence hits), 
+\item while keeping concurrent edges as a separate reinforcement diagnostic.
+\end{itemize}
+This produces a meaningful connected edge cloth at hits1, while preserving a minimalism-aligned story (no mutation of events/edges).
+
+\section*{Ensemble design (checkpoint)}
+Two ensembles were run with \(W_{\mathrm{coh}}=100\), bins=80, 5 seeds per case:
+\begin{itemize}
+\item \(N\in\{4,8\}\)
+\item \(n\in\{0.4,0.8\}\)
+\item hits1 and hits2 persistence thresholds
+\end{itemize}
+Explicit core/halo lists (\texttt{core\_edges\_used}, \texttt{core\_events\_used}) were logged to enable survival analysis.
+
+\section*{Survival results: sets versus geometry}
+\subsection*{Set survival (Jaccard across seeds)}
+For hits1, event-core sets are highly reproducible at high cross-link pressure (n=0.8), while edge-core sets are not:
+\begin{itemize}
+\item hits1, N=8, n=0.8: event Jaccard mean $\approx 0.964$; edge Jaccard mean $\approx 0.0097$.
+\item hits1, N=4, n=0.8: event Jaccard mean $\approx 0.944$; edge Jaccard mean $\approx 0.0171$.
+\end{itemize}
+For hits2, edge cores typically collapse to tiny recurrent pockets or empties, giving poor or trivial edge-set stability.
+
+\subsection*{Metric survival (ball-growth curve stability across seeds)}
+A key Stage--2 finding is that the \emph{geometry diagnostic} can be stable even when exact edges are not. Using ball-growth fraction curves \(|B(r)|/|C|\) normalised by the cloth component size, pairwise curve distances across seeds show:
+\begin{itemize}
+\item hits1: small distances (e.g.\ L2 RMS \(\sim 0.004\) to \(0.010\) depending on N and n), indicating a reasonably stable geometry \emph{class} across seeds.
+\item hits2: larger distances at n=0.8 and trivial zeros at n=0.4 (empty cloth cores), indicating that hits2 is too strict for the present epoch/binning.
+\end{itemize}
+Thus, hits1 is the appropriate working baseline for Stage--2 cloth geometry at this run length: it yields a connected cloth and stable ball-growth curves, while hits2 is better treated as a later robustness test once epochs are lengthened.
+
+\section*{Interpretation and Stage--2 milestone}
+This checkpoint establishes the first workable Stage--2 ``cloth'' regime:
+\begin{itemize}
+\item A connected edge-based cloth core can be extracted without storing mutable weights on primitives (bin-based usage hits by lockstep core).
+\item Event-core persistence is strong at high n, supporting the idea of stable ``places'' at Stage--2.
+\item Edge microstructure varies across seeds, but the ball-growth geometry diagnostic is comparatively stable across seeds in the permissive hits1 regime.
+\end{itemize}
+The emergent picture is therefore: stable cloth geometry should be assessed at the level of \emph{diagnostics} (ball growth, diameter-like proxies), not at the level of exact edge identity, at least at the current scale.
+
+\section*{Next steps}
+\begin{enumerate}[label=\arabic*.]
+\item Increase epoch length (or adjust binning) to enable stricter persistence thresholds (hits2/hits3) to yield connected edge cloths.
+\item Introduce and compare sliding-window concurrency (Stage--2b) to test sensitivity to bin boundaries.
+\item Define a ``core + halo'' reporting standard for cloth outputs (core used-by-core; halo used-by-all), and add survival metrics for both.
+\item Once a longer-epoch connected edge cloth is obtained at hits2+, revisit diffusion-based diagnostics on the cloth object (only if a genuine intermediate scaling regime is demonstrably present).
+\end{enumerate}
+
+\paragraph{Interpretation: concurrency versus cloth.}
+As implemented in the current Stage--2 code, \emph{edge concurrency} is a within-bin co-use test: the same directed transition \((u\to v)\) is taken by at least two threads in the same bin. This is therefore closer to an \emph{instantaneous channelisation} signature (tailgating / co-selection) than to a persistent cloth backbone. At the present epoch length and binning, concurrent edges are real but rarely repeat across bins, so they do not by themselves yield a stable cloth subgraph.
+
+A useful mental model is the hierarchy:
+\begin{itemize}
+\item \textbf{Edge concurrency} \(\Rightarrow\) ``channel is active now'' (instantaneous funneling).
+\item \textbf{Used-by-core bin hits} \(\Rightarrow\) ``channel is carved'' (routes that persist across bins).
+\item \textbf{Cloth core} \(\Rightarrow\) ``carved channels form a stable background'' (persistence across longer epochs / stricter thresholds).
+\end{itemize}
+This explains why concurrent edges do not yet show a robust cloth at the current sampling scale: cloth is a long-run stabilisation object, while concurrency is a short-run activity indicator.
+
+\paragraph{Strict persistence at longer epochs (hits2, $\times 10$).}
+We repeated the strict persistence ensemble (hits2: \texttt{min\_bin\_hits}=2) at $\times 10$ epoch length. The result is qualitatively unchanged: the strict edge core remains a collection of tiny recurrent pockets (mean cloth component size $\approx 3$), and exact edge-set survival across seeds remains near zero (nontrivial cases). However, the \emph{metric-level} diagnostic is more stable than edge identity: ball-growth fraction curves show comparatively small cross-seed distances in the high-cross-link regime (especially for $N=8$, $n=0.8$). We therefore interpret hits2 at this scale as a \emph{motif detector} (recurrent microstructure) rather than the Stage--2 ``cloth'' backbone. The connected cloth used for geometry tests remains the permissive hits1 definition, while stricter persistence will require either different definitions (e.g.\ event-filtered edges or quantile persistence) or a different measurement grain (coarser binning).
+
+\end{document}
