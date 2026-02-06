@@ -8,7 +8,6 @@ This repository accompanies **BCQM VII** (Stage–2 cloth programme: persistent 
 - figure PDFs and figure-generation scripts (`figures/`)
 - documentation and validation plans (`docs/`)
 - provenance notes (`provenance/`)
-- output_cloths.zip
 
 Zenodo DOIs (paper):
 ```text
@@ -16,7 +15,7 @@ Concept DOI : 10.5281/zenodo.18497216
 Version 1 DOI: 10.5281/zenodo.18497217
 ```
 
-> Note: The paper is reproducible from the shipped CSV artefacts and scripts, and runs can be regenerated using the configs in `configs_stage2/`.
+> Note: this repo ZIP intentionally **omits `outputs_cloth/`** (raw run outputs) to keep the distribution small. The paper is reproducible from the shipped CSV artefacts and scripts, and runs can be regenerated using the configs in `configs_stage2/`.
 
 ---
 
@@ -74,8 +73,11 @@ This will generate a new run folder under `outputs_cloth/` (not included in this
 - `docs/` — evidence manifest, validation plan, lab notes
 - `figures/` — final PDFs + figure generator scripts
 - `provenance/` — provenance notes, trimming notes
-- output_cloths.zip
 
 See `docs/EVIDENCE_MANIFEST.md` for the authoritative artefact index and rebuild recipes.
 
 ---
+
+## Housekeeping for public releases
+
+The ZIP includes macOS metadata files (`.DS_Store`, `__MACOSX/`). For a public release, it is best to remove these before uploading to Zenodo/GitHub.
