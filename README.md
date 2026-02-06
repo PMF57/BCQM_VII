@@ -77,7 +77,3 @@ This will generate a new run folder under `outputs_cloth/` (not included in this
 See `docs/EVIDENCE_MANIFEST.md` for the authoritative artefact index and rebuild recipes.
 
 ---
-
-## Housekeeping for public releases
-
-The ZIP includes macOS metadata files (`.DS_Store`, `__MACOSX/`). For a public release, it is best to remove these before uploading to Zenodo/GitHub.
