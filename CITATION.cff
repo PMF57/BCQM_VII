@@ -1,12 +1,12 @@
 cff-version: 1.2.0
-message: "If you use this repository, please cite the BCQM VII paper (Zenodo DOI) below."
+message: "If you use this repository, please cite the BCQM VII paper (Zenodo DOI) and this code archive DOI."
 title: "BCQM VII code and artefacts (Stage–2 cloth programme)"
 authors:
   - family-names: "Ferguson"
     given-names: "Peter M."
 version: "1.0"
-date-released: "2026-02-05"
-doi: "10.5281/zenodo.18497217"
+date-released: "2026-02-06"
+doi: "10.5281/zenodo.18505934"
 
 preferred-citation:
   type: report

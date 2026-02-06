@@ -13,7 +13,8 @@ Zenodo DOIs (paper):
 ```text
 Concept DOI : 10.5281/zenodo.18497216
 Version 1 DOI: 10.5281/zenodo.18497217
-```
+
+Code DOI     : 10.5281/zenodo.18505934```
 
 > Note: this repo ZIP intentionally **omits `outputs_cloth/`** (raw run outputs) to keep the distribution small. The paper is reproducible from the shipped CSV artefacts and scripts, and runs can be regenerated using the configs in `configs_stage2/`.
 
